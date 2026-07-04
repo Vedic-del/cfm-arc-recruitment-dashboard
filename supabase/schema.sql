@@ -73,3 +73,23 @@ alter table candidates disable row level security;
 alter table candidate_openings disable row level security;
 alter table pipeline_events disable row level security;
 alter table scorecards disable row level security;
+
+-- Storage: the `resumes` bucket (created manually via the dashboard, marked
+-- public) still enforces RLS on storage.objects for writes even when the
+-- bucket is public — "public" only bypasses RLS for reads via the public URL
+-- path. Add explicit anon policies so uploads/upserts from the app (no login,
+-- per the design decision) work.
+create policy "Allow anon uploads to resumes bucket"
+on storage.objects for insert
+to anon
+with check (bucket_id = 'resumes');
+
+create policy "Allow anon updates to resumes bucket"
+on storage.objects for update
+to anon
+using (bucket_id = 'resumes');
+
+create policy "Allow anon reads on resumes bucket"
+on storage.objects for select
+to anon
+using (bucket_id = 'resumes');
