@@ -64,3 +64,12 @@ create table scorecards (
   submitted_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- Some Supabase projects auto-enable RLS on new public-schema tables by
+-- default. Explicitly disable it here so the "no login, open link" design
+-- decision holds regardless of the project's default posture.
+alter table openings disable row level security;
+alter table candidates disable row level security;
+alter table candidate_openings disable row level security;
+alter table pipeline_events disable row level security;
+alter table scorecards disable row level security;
