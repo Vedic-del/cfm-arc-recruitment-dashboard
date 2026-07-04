@@ -550,18 +550,19 @@ export async function averageTimeToFill(): Promise<number | null> {
 Create `scripts/verify-openings.ts`:
 
 ```typescript
+// Load environment variables FIRST before any imports. Note: dotenv.config()
+// must run before the data-layer module is imported, not just textually
+// above it — a static `import ... from '../src/lib/db/openings'` at the top
+// of this file would be hoisted and evaluated (along with supabaseClient.ts's
+// top-level process.env read) before dotenv.config() runs, since ES module
+// imports execute before the importing module's own statements regardless of
+// source order. The dynamic import inside main() below sequences it correctly.
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-import {
-  createOpening,
-  listOpenings,
-  getOpening,
-  updateOpeningStatus,
-  averageTimeToFill,
-} from '../src/lib/db/openings';
-
 async function main() {
+  const { createOpening, listOpenings, getOpening, updateOpeningStatus, averageTimeToFill } = await import('../src/lib/db/openings');
+
   const opening = await createOpening({ title: 'Verification Test Role', department: 'QA' });
   console.log('Created:', opening.id);
 
@@ -698,12 +699,15 @@ export async function listCandidates(filters: CandidateFilters = {}): Promise<Ca
 Create `scripts/verify-candidates.ts`:
 
 ```typescript
+// dotenv.config() must run before the data-layer module is imported, not just
+// textually above it — see the note in scripts/verify-openings.ts (Task 4)
+// for why a static top-level import would silently break this.
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-import { createCandidate, getCandidate, listCandidates } from '../src/lib/db/candidates';
-
 async function main() {
+  const { createCandidate, getCandidate, listCandidates } = await import('../src/lib/db/candidates');
+
   const candidate = await createCandidate({
     name: 'Verification Test Candidate',
     years_experience_total: 5,
@@ -882,22 +886,25 @@ export async function getAverageTimeInStage(): Promise<Record<string, number>> {
 Create `scripts/verify-pipeline.ts`:
 
 ```typescript
+// dotenv.config() must run before the data-layer modules are imported, not
+// just textually above it — see the note in scripts/verify-openings.ts
+// (Task 4) for why a static top-level import would silently break this.
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-import { createOpening } from '../src/lib/db/openings';
-import { createCandidate } from '../src/lib/db/candidates';
-import {
-  linkCandidateToOpening,
-  advanceStage,
-  getPipelineForOpening,
-  getPipelineHistory,
-  getCandidateOpenings,
-  getStuckCandidates,
-  getStageCounts,
-} from '../src/lib/db/pipeline';
-
 async function main() {
+  const { createOpening } = await import('../src/lib/db/openings');
+  const { createCandidate } = await import('../src/lib/db/candidates');
+  const {
+    linkCandidateToOpening,
+    advanceStage,
+    getPipelineForOpening,
+    getPipelineHistory,
+    getCandidateOpenings,
+    getStuckCandidates,
+    getStageCounts,
+  } = await import('../src/lib/db/pipeline');
+
   const opening = await createOpening({ title: 'Pipeline Verification Role' });
   const candidate = await createCandidate({ name: 'Pipeline Verification Candidate' });
 
@@ -1017,20 +1024,23 @@ export async function getScorecardsForCandidateOpening(
 Create `scripts/verify-scorecards.ts`:
 
 ```typescript
+// dotenv.config() must run before the data-layer modules are imported, not
+// just textually above it — see the note in scripts/verify-openings.ts
+// (Task 4) for why a static top-level import would silently break this.
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-import { createOpening } from '../src/lib/db/openings';
-import { createCandidate } from '../src/lib/db/candidates';
-import { linkCandidateToOpening } from '../src/lib/db/pipeline';
-import {
-  generateScorecard,
-  getScorecardByToken,
-  submitScorecard,
-  getScorecardsForCandidateOpening,
-} from '../src/lib/db/scorecards';
-
 async function main() {
+  const { createOpening } = await import('../src/lib/db/openings');
+  const { createCandidate } = await import('../src/lib/db/candidates');
+  const { linkCandidateToOpening } = await import('../src/lib/db/pipeline');
+  const {
+    generateScorecard,
+    getScorecardByToken,
+    submitScorecard,
+    getScorecardsForCandidateOpening,
+  } = await import('../src/lib/db/scorecards');
+
   const opening = await createOpening({ title: 'Scorecard Verification Role' });
   const candidate = await createCandidate({ name: 'Scorecard Verification Candidate' });
   const co = await linkCandidateToOpening(candidate.id, opening.id);
