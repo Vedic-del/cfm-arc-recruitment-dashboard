@@ -7,10 +7,16 @@ import type { PipelineCard } from '@/lib/db/pipeline';
 
 export function PipelineBoard({ openingId, cards }: { openingId: string; cards: PipelineCard[] }) {
   const [links, setLinks] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function handleGenerateLink(candidateOpeningId: string, stage: Stage) {
-    const token = await generateScorecardAction(candidateOpeningId, stage);
-    setLinks((prev) => ({ ...prev, [candidateOpeningId]: `${window.location.origin}/scorecard/${token}` }));
+    try {
+      const token = await generateScorecardAction(candidateOpeningId, stage);
+      setLinks((prev) => ({ ...prev, [candidateOpeningId]: `${window.location.origin}/scorecard/${token}` }));
+      setErrors((prev) => ({ ...prev, [candidateOpeningId]: '' }));
+    } catch {
+      setErrors((prev) => ({ ...prev, [candidateOpeningId]: 'Failed to generate link — try again.' }));
+    }
   }
 
   return (
@@ -29,8 +35,16 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
           </div>
           <div className="flex gap-2 mt-2 items-center">
             <select
+              key={card.currentStage}
               defaultValue={card.currentStage}
-              onChange={(e) => advanceStageAction(card.candidateOpeningId, openingId, e.target.value as Stage)}
+              onChange={async (e) => {
+                try {
+                  await advanceStageAction(card.candidateOpeningId, openingId, e.target.value as Stage);
+                  setErrors((prev) => ({ ...prev, [card.candidateOpeningId]: '' }));
+                } catch {
+                  setErrors((prev) => ({ ...prev, [card.candidateOpeningId]: 'Failed to update stage — try again.' }));
+                }
+              }}
               className="border p-1 rounded"
             >
               {STAGES.map((s) => (
@@ -44,6 +58,11 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
               Generate Scorecard Link
             </button>
           </div>
+          {errors[card.candidateOpeningId] && (
+            <div className="mt-1 text-sm text-red-600">
+              {errors[card.candidateOpeningId]}
+            </div>
+          )}
           {links[card.candidateOpeningId] && (
             <div className="mt-2 text-sm break-all bg-gray-100 p-2 rounded">
               {links[card.candidateOpeningId]}
