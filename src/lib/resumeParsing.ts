@@ -12,10 +12,10 @@ export async function extractTextFromDocx(buffer: Buffer): Promise<string> {
 }
 
 export async function extractResumeText(file: File): Promise<string | null> {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const name = file.name.toLowerCase();
-
   try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const name = file.name.toLowerCase();
+
     if (name.endsWith('.pdf')) {
       return await extractTextFromPdf(buffer);
     }
