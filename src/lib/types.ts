@@ -56,6 +56,7 @@ export interface Candidate {
   source: string | null;
   resume_path: string | null;
   tags: string | null;
+  resume_summary: string | null;
   created_at: string;
 }
 
@@ -64,6 +65,8 @@ export interface CandidateOpening {
   candidate_id: string;
   opening_id: string;
   current_stage: Stage;
+  match_score: number | null;
+  match_rationale: string | null;
   created_at: string;
 }
 

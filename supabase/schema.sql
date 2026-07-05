@@ -95,3 +95,7 @@ to anon
 using (bucket_id = 'resumes');
 
 alter table openings add column description text;
+
+alter table candidates add column resume_summary text;
+alter table candidate_openings add column match_score int;
+alter table candidate_openings add column match_rationale text;
