@@ -80,6 +80,12 @@ export default async function CandidateProfilePage({ params }: { params: Promise
             View resume →
           </a>
         )}
+        {candidate.resume_summary && (
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <p className={FIELD_LABEL}>Resume summary (AI-extracted)</p>
+            <p className="mt-1.5 whitespace-pre-wrap text-sm text-ink">{candidate.resume_summary}</p>
+          </div>
+        )}
       </div>
 
       <h2 className="mt-8 mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">Pipeline history</h2>
