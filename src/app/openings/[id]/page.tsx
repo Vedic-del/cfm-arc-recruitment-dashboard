@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { getOpening } from '@/lib/db/openings';
 import { getPipelineForOpening } from '@/lib/db/pipeline';
+import { getScorecardsForOpening } from '@/lib/db/scorecards';
 import { PipelineBoard } from './PipelineBoard';
-import { markOpeningFilledAction, deleteOpeningAction } from './actions';
-import { SubmitButton } from '@/components/SubmitButton';
+import { deleteOpeningAction } from './actions';
+import { OpeningStatusControl } from './OpeningStatusControl';
 import { ConfirmDeleteForm } from '@/components/ConfirmDeleteForm';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -23,17 +24,22 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
       </div>
     );
   }
-  const cards = await getPipelineForOpening(id);
-  const boundMarkFilled = markOpeningFilledAction.bind(null, opening.id);
+  const [cards, scorecardsByCandidate] = await Promise.all([
+    getPipelineForOpening(id),
+    getScorecardsForOpening(id),
+  ]);
   const boundDelete = deleteOpeningAction.bind(null, opening.id);
   const candidateCount = cards.length;
+  const activeCount = cards.filter(
+    (c) => !['Joined', 'Rejected', 'Dropped'].includes(c.currentStage)
+  ).length;
 
   return (
     <div className="animate-fade-in-up">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-forest-950">{opening.title}</h1>
-          <p className="mt-1 flex items-center gap-2 text-sm text-slate">
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate">
             {opening.department}
             <span
               className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[opening.status] ?? 'bg-slate-100 text-slate'}`}
@@ -41,9 +47,12 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
               {opening.status.replace('_', ' ')}
             </span>
             · Opened {opening.date_opened}
+            {opening.hiring_manager && <>· Hiring manager: {opening.hiring_manager}</>}
+            · {activeCount} active candidate{activeCount === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <OpeningStatusControl openingId={opening.id} status={opening.status} />
           <Link
             href={`/openings/${opening.id}/edit`}
             className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
@@ -56,9 +65,6 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
           >
             + Add Candidate
           </Link>
-          <form action={boundMarkFilled}>
-            <SubmitButton variant="secondary" pendingText="Saving…">Mark Filled</SubmitButton>
-          </form>
           <ConfirmDeleteForm
             action={boundDelete}
             confirmMessage={
@@ -79,7 +85,7 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
         )}
       </div>
 
-      <PipelineBoard openingId={opening.id} cards={cards} />
+      <PipelineBoard openingId={opening.id} cards={cards} scorecardsByCandidate={scorecardsByCandidate} />
     </div>
   );
 }

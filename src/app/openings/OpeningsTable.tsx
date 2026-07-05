@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { bulkDeleteOpeningsAction } from './actions';
 import { Spinner } from '@/components/Spinner';
-import type { Opening } from '@/lib/types';
+import type { OpeningWithCount } from '@/lib/db/openings';
 
 const STATUS_STYLES: Record<string, string> = {
   open: 'bg-green-100 text-forest-900',
@@ -14,7 +14,7 @@ const STATUS_STYLES: Record<string, string> = {
   filled: 'bg-forest-900 text-green-100',
 };
 
-export function OpeningsTable({ openings }: { openings: Opening[] }) {
+export function OpeningsTable({ openings }: { openings: OpeningWithCount[] }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
@@ -83,6 +83,7 @@ export function OpeningsTable({ openings }: { openings: Opening[] }) {
               </th>
               <th className="p-3">Title</th>
               <th className="p-3">Department</th>
+              <th className="p-3">Candidates</th>
               <th className="p-3">Status</th>
               <th className="p-3">Priority</th>
               <th className="p-3">Opened</th>
@@ -108,6 +109,18 @@ export function OpeningsTable({ openings }: { openings: Opening[] }) {
                   </Link>
                 </td>
                 <td className="p-3 text-ink">{o.department}</td>
+                <td className="p-3">
+                  {o.candidateCount === 0 ? (
+                    <span className="text-slate">—</span>
+                  ) : (
+                    <span className="text-ink">
+                      <span className="font-semibold text-forest-900">{o.activeCandidateCount}</span> active
+                      {o.candidateCount > o.activeCandidateCount && (
+                        <span className="text-slate"> / {o.candidateCount} total</span>
+                      )}
+                    </span>
+                  )}
+                </td>
                 <td className="p-3">
                   <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[o.status] ?? 'bg-slate-100 text-slate'}`}>
                     {o.status.replace('_', ' ')}

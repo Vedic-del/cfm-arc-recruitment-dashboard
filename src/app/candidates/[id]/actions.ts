@@ -1,9 +1,15 @@
 'use server';
 
 import { linkCandidateToOpening } from '@/lib/db/pipeline';
-import { deleteCandidate } from '@/lib/db/candidates';
+import { deleteCandidate, addCandidateNote } from '@/lib/db/candidates';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+
+export async function addNoteAction(candidateId: string, note: string): Promise<void> {
+  if (!note.trim()) throw new Error('Note cannot be empty');
+  await addCandidateNote(candidateId, note.trim());
+  revalidatePath(`/candidates/${candidateId}`);
+}
 
 export async function linkToOpeningAction(candidateId: string, formData: FormData) {
   const openingId = String(formData.get('opening_id') ?? '');

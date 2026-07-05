@@ -67,6 +67,16 @@ export interface CandidateOpening {
   current_stage: Stage;
   match_score: number | null;
   match_rationale: string | null;
+  next_step: string | null;
+  next_action_date: string | null;
+  outcome_reason: string | null;
+  created_at: string;
+}
+
+export interface CandidateNote {
+  id: string;
+  candidate_id: string;
+  note: string;
   created_at: string;
 }
 

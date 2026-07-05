@@ -1,6 +1,17 @@
 import Link from 'next/link';
 import { listOpenings, averageTimeToFill } from '@/lib/db/openings';
-import { getStuckCandidates, getStageCounts, getAverageTimeInStage } from '@/lib/db/pipeline';
+import {
+  getStuckCandidates,
+  getStageCounts,
+  getAverageTimeInStage,
+  getUpcomingActions,
+} from '@/lib/db/pipeline';
+
+function isOverdue(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dateStr) < today;
+}
 
 const STATUS_STYLES: Record<string, string> = {
   open: 'bg-green-100 text-forest-900',
@@ -10,11 +21,14 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const openings = await listOpenings();
-  const stuck = await getStuckCandidates();
-  const stageCounts = await getStageCounts();
-  const avgTimeInStage = await getAverageTimeInStage();
-  const avgFill = await averageTimeToFill();
+  const [openings, stuck, stageCounts, avgTimeInStage, avgFill, upcoming] = await Promise.all([
+    listOpenings(),
+    getStuckCandidates(),
+    getStageCounts(),
+    getAverageTimeInStage(),
+    averageTimeToFill(),
+    getUpcomingActions(),
+  ]);
 
   const openingsByStatus: Record<string, number> = {};
   for (const o of openings) {
@@ -47,6 +61,40 @@ export default async function DashboardPage() {
           ))}
         </div>
       </section>
+
+      {upcoming.length > 0 && (
+        <section className="animate-fade-in-up rounded-xl border border-slate-200 bg-white p-5 shadow-sm [animation-delay:30ms]">
+          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">
+            Upcoming actions ({upcoming.length})
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {upcoming.map((a) => {
+              const overdue = isOverdue(a.nextActionDate);
+              return (
+                <li key={a.candidateOpeningId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span>
+                    <Link
+                      href={`/candidates/${a.candidateId}`}
+                      className="font-medium text-forest-700 hover:text-forest-900 hover:underline"
+                    >
+                      {a.candidateName}
+                    </Link>
+                    <span className="text-slate"> · {a.openingTitle} · {a.currentStage}</span>
+                    {a.nextStep && <span className="text-ink"> — {a.nextStep}</span>}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      overdue ? 'bg-danger-bg text-danger' : 'bg-green-100 text-forest-900'
+                    }`}
+                  >
+                    {overdue ? `⚠ Overdue · ${a.nextActionDate}` : a.nextActionDate}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="animate-fade-in-up [animation-delay:60ms]">
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">Candidates per stage</h2>

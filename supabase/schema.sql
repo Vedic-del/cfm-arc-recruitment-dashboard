@@ -134,3 +134,18 @@ select _cascade_fk('pipeline_events', 'candidate_opening_id', 'candidate_opening
 select _cascade_fk('scorecards', 'candidate_opening_id', 'candidate_openings', 'scorecards_candidate_opening_id_fkey');
 
 drop function _cascade_fk(text, text, text, text);
+
+-- Screening/call notes kept per candidate (timestamped activity log).
+create table candidate_notes (
+  id uuid primary key default gen_random_uuid(),
+  candidate_id uuid not null references candidates(id) on delete cascade,
+  note text not null,
+  created_at timestamptz not null default now()
+);
+alter table candidate_notes disable row level security;
+
+-- Follow-up tracking per candidate-in-pipeline, plus the reason captured
+-- when a candidate is moved to Rejected/Dropped.
+alter table candidate_openings add column next_step text;
+alter table candidate_openings add column next_action_date date;
+alter table candidate_openings add column outcome_reason text;

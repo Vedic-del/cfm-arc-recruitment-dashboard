@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { getCandidate, getResumeUrl } from '@/lib/db/candidates';
+import { getCandidate, getCandidateNotes } from '@/lib/db/candidates';
 import { getCandidateOpenings, getPipelineHistory } from '@/lib/db/pipeline';
 import { getScorecardsForCandidateOpening } from '@/lib/db/scorecards';
 import { listOpenings } from '@/lib/db/openings';
 import { linkToOpeningAction, deleteCandidateAction } from './actions';
 import { SubmitButton } from '@/components/SubmitButton';
 import { ConfirmDeleteForm } from '@/components/ConfirmDeleteForm';
+import { NotesSection } from './NotesSection';
 
 const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wide text-slate';
 const FIELD_VALUE = 'text-sm text-ink';
@@ -21,8 +22,11 @@ export default async function CandidateProfilePage({ params }: { params: Promise
     );
   }
 
-  const candidateOpenings = await getCandidateOpenings(id);
-  const openings = await listOpenings();
+  const [candidateOpenings, openings, notes] = await Promise.all([
+    getCandidateOpenings(id),
+    listOpenings(),
+    getCandidateNotes(id),
+  ]);
   const boundAction = linkToOpeningAction.bind(null, candidate.id);
   const boundDelete = deleteCandidateAction.bind(null, candidate.id);
   const linkedCount = candidateOpenings.length;
@@ -85,15 +89,6 @@ export default async function CandidateProfilePage({ params }: { params: Promise
             </div>
           ))}
         </dl>
-        {candidate.resume_path && (
-          <a
-            href={getResumeUrl(candidate.resume_path)}
-            target="_blank"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-forest-700 hover:text-forest-900 hover:underline"
-          >
-            View resume →
-          </a>
-        )}
         {candidate.resume_summary && (
           <div className="mt-4 border-t border-slate-200 pt-4">
             <p className={FIELD_LABEL}>Resume summary (AI-extracted)</p>
@@ -101,6 +96,9 @@ export default async function CandidateProfilePage({ params }: { params: Promise
           </div>
         )}
       </div>
+
+      <h2 className="mt-8 mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">Notes &amp; activity</h2>
+      <NotesSection candidateId={candidate.id} notes={notes} />
 
       <h2 className="mt-8 mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">Pipeline history</h2>
       {pipelineDetails.length === 0 ? (
@@ -110,8 +108,22 @@ export default async function CandidateProfilePage({ params }: { params: Promise
           {pipelineDetails.map(({ co, history, scorecards }) => (
             <div key={co.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="font-medium text-ink">
-                {co.openingTitle} <span className="text-slate">—</span> <span className="text-forest-900">{co.current_stage}</span>
+                <Link href={`/openings/${co.opening_id}`} className="hover:text-forest-900 hover:underline">
+                  {co.openingTitle}
+                </Link>{' '}
+                <span className="text-slate">—</span> <span className="text-forest-900">{co.current_stage}</span>
               </p>
+              {co.outcome_reason && (co.current_stage === 'Rejected' || co.current_stage === 'Dropped') && (
+                <p className="mt-1 text-sm text-slate">
+                  Reason: <span className="text-ink">{co.outcome_reason}</span>
+                </p>
+              )}
+              {co.next_step || co.next_action_date ? (
+                <p className="mt-1 text-sm text-slate">
+                  Next step: <span className="text-ink">{co.next_step ?? 'Follow up'}</span>
+                  {co.next_action_date && <span> by {co.next_action_date}</span>}
+                </p>
+              ) : null}
               {co.match_score !== null && (
                 <p className="mt-1 text-sm text-slate">
                   Match score: <span className="font-semibold text-forest-900">{co.match_score}/100</span>

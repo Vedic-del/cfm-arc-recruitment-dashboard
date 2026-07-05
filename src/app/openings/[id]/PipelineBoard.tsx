@@ -1,12 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { STAGES, type Stage } from '@/lib/types';
-import { advanceStageAction, generateScorecardAction, scoreMatchAction } from './actions';
+import Link from 'next/link';
+import { STAGES, type Stage, type Scorecard } from '@/lib/types';
+import {
+  advanceStageAction,
+  generateScorecardAction,
+  scoreMatchAction,
+  updateNextStepAction,
+} from './actions';
 import type { PipelineCard } from '@/lib/db/pipeline';
 import { Spinner } from '@/components/Spinner';
 
 const PATH: Stage[] = ['Sourced', 'Screening', 'Round 1', 'Round 2', 'HR/Offer Discussion', 'Offer', 'Joined'];
+
+const SMALL_INPUT =
+  'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition';
 
 function ProgressRail({ stage }: { stage: Stage }) {
   if (stage === 'Rejected' || stage === 'Dropped') {
@@ -44,7 +53,119 @@ function matchBadgeClasses(score: number): string {
   return 'bg-green-100 text-forest-900';
 }
 
-export function PipelineBoard({ openingId, cards }: { openingId: string; cards: PipelineCard[] }) {
+function scorecardBadgeClasses(score: string | null): string {
+  if (score === 'Select') return 'bg-green-100 text-forest-900';
+  if (score === 'Hold') return 'bg-amber-100 text-amber-800';
+  if (score === 'Reject') return 'bg-danger-bg text-danger';
+  return 'bg-slate-100 text-slate';
+}
+
+function isOverdue(dateStr: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dateStr) < today;
+}
+
+function NextStepEditor({
+  card,
+  openingId,
+  onError,
+}: {
+  card: PipelineCard;
+  openingId: string;
+  onError: (msg: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [step, setStep] = useState(card.nextStep ?? '');
+  const [date, setDate] = useState(card.nextActionDate ?? '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<{ step: string | null; date: string | null } | null>(null);
+
+  const currentStep = saved ? saved.step : card.nextStep;
+  const currentDate = saved ? saved.date : card.nextActionDate;
+  const closed = card.currentStage === 'Joined' || card.currentStage === 'Rejected' || card.currentStage === 'Dropped';
+
+  if (closed) return null;
+
+  async function save() {
+    setSaving(true);
+    try {
+      await updateNextStepAction(card.candidateOpeningId, openingId, step.trim() || null, date || null);
+      setSaved({ step: step.trim() || null, date: date || null });
+      setEditing(false);
+    } catch {
+      onError("Couldn't save the next step — try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          value={step}
+          onChange={(e) => setStep(e.target.value)}
+          placeholder="Next step, e.g. Schedule Round 1"
+          className={`${SMALL_INPUT} min-w-[220px] flex-1`}
+        />
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={SMALL_INPUT} />
+        <button
+          onClick={save}
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-forest-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saving && <Spinner className="h-3 w-3" />}
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          disabled={saving}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate transition-colors hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  if (currentStep || currentDate) {
+    const overdue = currentDate ? isOverdue(currentDate) : false;
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            overdue ? 'bg-danger-bg text-danger' : 'bg-slate-100 text-ink'
+          }`}
+        >
+          {overdue ? '⚠ Overdue' : 'Next'}: {currentStep ?? 'Follow up'}
+          {currentDate ? ` · ${currentDate}` : ''}
+        </span>
+        <button onClick={() => setEditing(true)} className="text-xs font-medium text-forest-700 hover:text-forest-900 hover:underline">
+          Edit
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <button onClick={() => setEditing(true)} className="text-xs font-medium text-forest-700 hover:text-forest-900 hover:underline">
+        + Set next step / follow-up date
+      </button>
+    </div>
+  );
+}
+
+export function PipelineBoard({
+  openingId,
+  cards,
+  scorecardsByCandidate,
+}: {
+  openingId: string;
+  cards: PipelineCard[];
+  scorecardsByCandidate: Record<string, Scorecard[]>;
+}) {
   const [links, setLinks] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, { score: number; rationale: string }>>({});
@@ -52,13 +173,23 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
   const [pendingLink, setPendingLink] = useState<Record<string, boolean>>({});
   const [pendingMatch, setPendingMatch] = useState<Record<string, boolean>>({});
 
+  function setError(candidateOpeningId: string, msg: string) {
+    setErrors((prev) => ({ ...prev, [candidateOpeningId]: msg }));
+  }
+
   async function handleAdvanceStage(candidateOpeningId: string, candidateId: string, newStage: Stage) {
+    let reason: string | undefined;
+    if (newStage === 'Rejected' || newStage === 'Dropped') {
+      reason =
+        prompt(`Why is this candidate being marked ${newStage.toLowerCase()}? (optional — press OK to continue)`) ??
+        undefined;
+    }
     setPendingStage((prev) => ({ ...prev, [candidateOpeningId]: true }));
     try {
-      await advanceStageAction(candidateOpeningId, openingId, candidateId, newStage);
-      setErrors((prev) => ({ ...prev, [candidateOpeningId]: '' }));
+      await advanceStageAction(candidateOpeningId, openingId, candidateId, newStage, reason);
+      setError(candidateOpeningId, '');
     } catch {
-      setErrors((prev) => ({ ...prev, [candidateOpeningId]: 'Failed to update stage — try again.' }));
+      setError(candidateOpeningId, 'Failed to update stage — try again.');
     } finally {
       setPendingStage((prev) => ({ ...prev, [candidateOpeningId]: false }));
     }
@@ -69,25 +200,25 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
     try {
       const token = await generateScorecardAction(candidateOpeningId, stage);
       setLinks((prev) => ({ ...prev, [candidateOpeningId]: `${window.location.origin}/scorecard/${token}` }));
-      setErrors((prev) => ({ ...prev, [candidateOpeningId]: '' }));
+      setError(candidateOpeningId, '');
     } catch {
-      setErrors((prev) => ({ ...prev, [candidateOpeningId]: 'Failed to generate link — try again.' }));
+      setError(candidateOpeningId, 'Failed to generate link — try again.');
     } finally {
       setPendingLink((prev) => ({ ...prev, [candidateOpeningId]: false }));
     }
   }
 
-  async function handleScoreMatch(candidateOpeningId: string) {
+  async function handleScoreMatch(candidateOpeningId: string, candidateId: string) {
     setPendingMatch((prev) => ({ ...prev, [candidateOpeningId]: true }));
     try {
-      const result = await scoreMatchAction(candidateOpeningId);
+      const result = await scoreMatchAction(candidateOpeningId, candidateId);
       setScores((prev) => ({ ...prev, [candidateOpeningId]: result }));
-      setErrors((prev) => ({ ...prev, [candidateOpeningId]: '' }));
+      setError(candidateOpeningId, '');
     } catch {
-      setErrors((prev) => ({
-        ...prev,
-        [candidateOpeningId]: 'Failed to score match — make sure both a resume summary and a job description exist.',
-      }));
+      setError(
+        candidateOpeningId,
+        'Failed to score match — make sure both a resume summary and a job description exist.'
+      );
     } finally {
       setPendingMatch((prev) => ({ ...prev, [candidateOpeningId]: false }));
     }
@@ -107,6 +238,7 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
         const effectiveScore =
           scores[card.candidateOpeningId] ??
           (card.matchScore !== null ? { score: card.matchScore, rationale: card.matchRationale ?? '' } : null);
+        const scorecards = scorecardsByCandidate[card.candidateOpeningId] ?? [];
 
         return (
           <div
@@ -117,7 +249,12 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
             }`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium text-ink">{card.candidateName}</span>
+              <Link
+                href={`/candidates/${card.candidateId}`}
+                className="font-medium text-ink hover:text-forest-900 hover:underline"
+              >
+                {card.candidateName}
+              </Link>
               <div className="flex items-center gap-2">
                 <ProgressRail stage={card.currentStage} />
                 {card.stuck && (
@@ -160,7 +297,7 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
                 )}
               </button>
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               {effectiveScore !== null ? (
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${matchBadgeClasses(effectiveScore.score)}`}
@@ -170,7 +307,7 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
                 </span>
               ) : (
                 <button
-                  onClick={() => handleScoreMatch(card.candidateOpeningId)}
+                  onClick={() => handleScoreMatch(card.candidateOpeningId, card.candidateId)}
                   disabled={pendingMatch[card.candidateOpeningId]}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -184,10 +321,25 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
                   )}
                 </button>
               )}
+              {scorecards.map((sc) => (
+                <span
+                  key={sc.id}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${scorecardBadgeClasses(sc.submitted_at ? sc.score : null)}`}
+                  title={sc.comments ?? undefined}
+                >
+                  {sc.stage}: {sc.submitted_at ? sc.score : 'awaiting feedback'}
+                </span>
+              ))}
             </div>
             {effectiveScore?.rationale && (
               <p className="mt-1 text-xs text-slate">{effectiveScore.rationale}</p>
             )}
+            {card.outcomeReason && (card.currentStage === 'Rejected' || card.currentStage === 'Dropped') && (
+              <p className="mt-1 text-xs text-slate">
+                Reason: <span className="text-ink">{card.outcomeReason}</span>
+              </p>
+            )}
+            <NextStepEditor card={card} openingId={openingId} onError={(msg) => setError(card.candidateOpeningId, msg)} />
             {errors[card.candidateOpeningId] && (
               <div className="mt-2 text-sm text-danger">
                 {errors[card.candidateOpeningId]}

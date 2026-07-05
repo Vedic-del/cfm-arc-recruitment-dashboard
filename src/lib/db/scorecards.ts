@@ -56,3 +56,19 @@ export async function getScorecardsForCandidateOpening(
   if (error) throw new Error(`getScorecardsForCandidateOpening failed: ${error.message}`);
   return data as Scorecard[];
 }
+
+export async function getScorecardsForOpening(
+  openingId: string
+): Promise<Record<string, Scorecard[]>> {
+  const { data, error } = await supabase
+    .from('scorecards')
+    .select('*, candidate_openings!inner(opening_id)')
+    .eq('candidate_openings.opening_id', openingId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`getScorecardsForOpening failed: ${error.message}`);
+  const map: Record<string, Scorecard[]> = {};
+  for (const row of data as Scorecard[]) {
+    (map[row.candidate_opening_id] ??= []).push(row);
+  }
+  return map;
+}

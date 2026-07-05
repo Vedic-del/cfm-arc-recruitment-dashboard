@@ -21,7 +21,11 @@ export async function linkCandidateToOpening(
   return co;
 }
 
-export async function advanceStage(candidateOpeningId: string, newStage: Stage): Promise<void> {
+export async function advanceStage(
+  candidateOpeningId: string,
+  newStage: Stage,
+  reason?: string
+): Promise<void> {
   const { error: updateError } = await supabase
     .from('candidate_openings')
     .update({ current_stage: newStage })
@@ -31,6 +35,26 @@ export async function advanceStage(candidateOpeningId: string, newStage: Stage):
     .from('pipeline_events')
     .insert({ candidate_opening_id: candidateOpeningId, stage: newStage });
   if (eventError) throw new Error(`advanceStage event failed: ${eventError.message}`);
+  if (reason !== undefined) {
+    // Best-effort: the stage change above must not be blocked if the
+    // outcome_reason column migration hasn't been applied yet.
+    await supabase
+      .from('candidate_openings')
+      .update({ outcome_reason: reason || null })
+      .eq('id', candidateOpeningId);
+  }
+}
+
+export async function updateNextStep(
+  candidateOpeningId: string,
+  nextStep: string | null,
+  nextActionDate: string | null
+): Promise<void> {
+  const { error } = await supabase
+    .from('candidate_openings')
+    .update({ next_step: nextStep, next_action_date: nextActionDate })
+    .eq('id', candidateOpeningId);
+  if (error) throw new Error(`updateNextStep failed: ${error.message}`);
 }
 
 export interface PipelineCard {
@@ -42,6 +66,9 @@ export interface PipelineCard {
   stuck: boolean;
   matchScore: number | null;
   matchRationale: string | null;
+  nextStep: string | null;
+  nextActionDate: string | null;
+  outcomeReason: string | null;
 }
 
 interface PipelineCardRow {
@@ -52,6 +79,9 @@ interface PipelineCardRow {
   pipeline_events: { stage: Stage; entered_at: string }[];
   match_score: number | null;
   match_rationale: string | null;
+  next_step?: string | null;
+  next_action_date?: string | null;
+  outcome_reason?: string | null;
 }
 
 function toPipelineCard(row: PipelineCardRow): PipelineCard {
@@ -66,13 +96,16 @@ function toPipelineCard(row: PipelineCardRow): PipelineCard {
     stuck: isStuck(events),
     matchScore: row.match_score,
     matchRationale: row.match_rationale,
+    nextStep: row.next_step ?? null,
+    nextActionDate: row.next_action_date ?? null,
+    outcomeReason: row.outcome_reason ?? null,
   };
 }
 
 export async function getPipelineForOpening(openingId: string): Promise<PipelineCard[]> {
   const { data, error } = await supabase
     .from('candidate_openings')
-    .select('id, current_stage, candidate_id, match_score, match_rationale, candidates(name), pipeline_events(stage, entered_at)')
+    .select('*, candidates(name), pipeline_events(stage, entered_at)')
     .eq('opening_id', openingId);
   if (error) throw new Error(`getPipelineForOpening failed: ${error.message}`);
   return (data as unknown as PipelineCardRow[]).map(toPipelineCard);
@@ -106,10 +139,72 @@ export async function getCandidateOpenings(
 export async function getStuckCandidates(): Promise<PipelineCard[]> {
   const { data, error } = await supabase
     .from('candidate_openings')
-    .select('id, current_stage, candidate_id, match_score, match_rationale, candidates(name), pipeline_events(stage, entered_at)')
+    .select('*, candidates(name), pipeline_events(stage, entered_at)')
     .not('current_stage', 'in', '(Joined,Rejected,Dropped)');
   if (error) throw new Error(`getStuckCandidates failed: ${error.message}`);
   return (data as unknown as PipelineCardRow[]).map(toPipelineCard).filter((c) => c.stuck);
+}
+
+export interface UpcomingAction {
+  candidateOpeningId: string;
+  candidateId: string;
+  candidateName: string;
+  openingTitle: string;
+  currentStage: Stage;
+  nextStep: string | null;
+  nextActionDate: string;
+}
+
+export async function getUpcomingActions(): Promise<UpcomingAction[]> {
+  // Tolerant of the next_action_date column not existing yet (pre-migration):
+  // return an empty list rather than crashing the dashboard.
+  const { data, error } = await supabase
+    .from('candidate_openings')
+    .select('id, candidate_id, current_stage, next_step, next_action_date, candidates(name), openings(title)')
+    .not('next_action_date', 'is', null)
+    .not('current_stage', 'in', '(Joined,Rejected,Dropped)')
+    .order('next_action_date', { ascending: true });
+  if (error) return [];
+  interface Row {
+    id: string;
+    candidate_id: string;
+    current_stage: Stage;
+    next_step: string | null;
+    next_action_date: string;
+    candidates: { name: string };
+    openings: { title: string };
+  }
+  return (data as unknown as Row[]).map((row) => ({
+    candidateOpeningId: row.id,
+    candidateId: row.candidate_id,
+    candidateName: row.candidates.name,
+    openingTitle: row.openings.title,
+    currentStage: row.current_stage,
+    nextStep: row.next_step,
+    nextActionDate: row.next_action_date,
+  }));
+}
+
+export interface CandidateStageInfo {
+  openingTitle: string;
+  stage: Stage;
+}
+
+export async function getStagesByCandidate(): Promise<Record<string, CandidateStageInfo[]>> {
+  const { data, error } = await supabase
+    .from('candidate_openings')
+    .select('candidate_id, current_stage, openings(title)');
+  if (error) throw new Error(`getStagesByCandidate failed: ${error.message}`);
+  interface Row {
+    candidate_id: string;
+    current_stage: Stage;
+    openings: { title: string };
+  }
+  const map: Record<string, CandidateStageInfo[]> = {};
+  for (const row of data as unknown as Row[]) {
+    (map[row.candidate_id] ??= []).push({ openingTitle: row.openings.title, stage: row.current_stage });
+  }
+  return map;
 }
 
 export async function getStageCounts(): Promise<Record<string, number>> {

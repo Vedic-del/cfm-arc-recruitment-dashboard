@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { listCandidates } from '@/lib/db/candidates';
+import { getStagesByCandidate } from '@/lib/db/pipeline';
 import { CandidatesTable } from './CandidatesTable';
 
 const INPUT = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition';
@@ -10,12 +11,15 @@ export default async function CandidatesPage({
   searchParams: Promise<{ query?: string; minExperience?: string; maxSalary?: string; source?: string }>;
 }) {
   const sp = await searchParams;
-  const candidates = await listCandidates({
-    query: sp.query,
-    minExperience: sp.minExperience ? Number(sp.minExperience) : undefined,
-    maxSalary: sp.maxSalary ? Number(sp.maxSalary) : undefined,
-    source: sp.source,
-  });
+  const [candidates, stagesByCandidate] = await Promise.all([
+    listCandidates({
+      query: sp.query,
+      minExperience: sp.minExperience ? Number(sp.minExperience) : undefined,
+      maxSalary: sp.maxSalary ? Number(sp.maxSalary) : undefined,
+      source: sp.source,
+    }),
+    getStagesByCandidate(),
+  ]);
 
   return (
     <div className="animate-fade-in-up">
@@ -46,7 +50,7 @@ export default async function CandidatesPage({
           <p className="text-sm text-slate">No candidates match yet — try widening the filters, or add a new candidate.</p>
         </div>
       ) : (
-        <CandidatesTable candidates={candidates} />
+        <CandidatesTable candidates={candidates} stagesByCandidate={stagesByCandidate} />
       )}
     </div>
   );

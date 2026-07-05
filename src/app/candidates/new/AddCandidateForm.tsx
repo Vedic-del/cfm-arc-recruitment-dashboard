@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { createCandidateAction, parseResumeAction } from './actions';
+import { useRef, useState } from 'react';
+import { checkDuplicatesAction, createCandidateAction, parseResumeAction } from './actions';
 import { SubmitButton } from '@/components/SubmitButton';
 import { Spinner } from '@/components/Spinner';
 import type { Opening } from '@/lib/types';
@@ -54,9 +54,36 @@ export function AddCandidateForm({
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState('');
   const [parsed, setParsed] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const duplicateCheckPassed = useRef(false);
 
   function update(key: keyof FieldState, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
+    duplicateCheckPassed.current = false;
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (duplicateCheckPassed.current) return; // already confirmed — let the action run
+    e.preventDefault();
+    let duplicates: { name: string; matchedOn: string }[] = [];
+    try {
+      duplicates = await checkDuplicatesAction({
+        name: fields.name,
+        email: fields.email || undefined,
+        phone: fields.phone || undefined,
+      });
+    } catch {
+      // never block creation on a failed check
+    }
+    if (duplicates.length > 0) {
+      const list = duplicates.map((d) => `• ${d.name} (same ${d.matchedOn})`).join('\n');
+      const proceed = confirm(
+        `Possible duplicate — this person may already be in the repository:\n\n${list}\n\nAdd them anyway?`
+      );
+      if (!proceed) return;
+    }
+    duplicateCheckPassed.current = true;
+    formRef.current?.requestSubmit();
   }
 
   async function handleResumeFile(file: File) {
@@ -96,7 +123,9 @@ export function AddCandidateForm({
 
   return (
     <form
+      ref={formRef}
       action={createCandidateAction}
+      onSubmit={handleSubmit}
       className="mt-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
     >
       <div className="rounded-lg border border-dashed border-slate-300 bg-slate-100/60 p-3">

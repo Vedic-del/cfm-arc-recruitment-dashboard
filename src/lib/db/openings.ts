@@ -29,6 +29,30 @@ export async function listOpenings(): Promise<Opening[]> {
   return data as Opening[];
 }
 
+export interface OpeningWithCount extends Opening {
+  candidateCount: number;
+  activeCandidateCount: number;
+}
+
+export async function listOpeningsWithCounts(): Promise<OpeningWithCount[]> {
+  const openings = await listOpenings();
+  const { data, error } = await supabase.from('candidate_openings').select('opening_id, current_stage');
+  if (error) throw new Error(`listOpeningsWithCounts failed: ${error.message}`);
+  const total: Record<string, number> = {};
+  const active: Record<string, number> = {};
+  for (const row of data as { opening_id: string; current_stage: string }[]) {
+    total[row.opening_id] = (total[row.opening_id] ?? 0) + 1;
+    if (!['Joined', 'Rejected', 'Dropped'].includes(row.current_stage)) {
+      active[row.opening_id] = (active[row.opening_id] ?? 0) + 1;
+    }
+  }
+  return openings.map((o) => ({
+    ...o,
+    candidateCount: total[o.id] ?? 0,
+    activeCandidateCount: active[o.id] ?? 0,
+  }));
+}
+
 export async function getOpening(id: string): Promise<Opening | null> {
   const { data, error } = await supabase.from('openings').select('*').eq('id', id).single();
   if (error) return null;

@@ -23,6 +23,21 @@ export async function parseResumeAction(
   }
 }
 
+export async function checkDuplicatesAction(input: {
+  name: string;
+  email?: string;
+  phone?: string;
+}): Promise<{ name: string; matchedOn: string }[]> {
+  const { findPotentialDuplicates } = await import('@/lib/db/candidates');
+  try {
+    const matches = await findPotentialDuplicates(input);
+    return matches.map((m) => ({ name: m.name, matchedOn: m.matchedOn }));
+  } catch {
+    // Never block candidate creation on a failed duplicate check.
+    return [];
+  }
+}
+
 export async function createCandidateAction(formData: FormData) {
   const name = String(formData.get('name') ?? '');
   if (!name.trim()) throw new Error('Name is required');

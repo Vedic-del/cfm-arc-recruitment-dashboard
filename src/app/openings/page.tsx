@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { listOpenings } from '@/lib/db/openings';
+import { listOpeningsWithCounts } from '@/lib/db/openings';
 import { OpeningsTable } from './OpeningsTable';
 
 export default async function OpeningsPage() {
-  const openings = await listOpenings();
+  const openings = await listOpeningsWithCounts();
   return (
     <div className="animate-fade-in-up">
       <div className="mb-6 flex items-center justify-between">
