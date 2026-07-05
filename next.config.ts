@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // its own package directory at runtime. Bundling it with Turbopack/webpack
   // breaks that resolution (worker file goes missing from the server bundle
   // output), so it must run as a real, unbundled Node module instead.
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
   // Marking a package "external" (above) means Vercel's own file tracer
   // decides which of its files actually ship in the deployed serverless
   // function bundle. Its static analysis doesn't reliably follow the dynamic
@@ -13,8 +13,19 @@ const nextConfig: NextConfig = {
   // silently dropped most of pdf-parse/pdfjs-dist from the bundle (observed:
   // "Failed to load external module pdf-parse" at runtime, works fine when
   // running the full checkout locally). Force-include both packages in full.
+  //
+  // pdfjs-dist's legacy Node build also needs @napi-rs/canvas at runtime to
+  // polyfill browser-only geometry APIs (DOMMatrix/ImageData/Path2D) it uses
+  // internally even for plain text extraction — without it, extraction fails
+  // with "ReferenceError: DOMMatrix is not defined". @napi-rs/canvas ships a
+  // native binary per platform, so it must be traced in fully too.
   outputFileTracingIncludes: {
-    "/candidates/new": ["./node_modules/pdf-parse/**/*", "./node_modules/pdfjs-dist/**/*"],
+    "/candidates/new": [
+      "./node_modules/pdf-parse/**/*",
+      "./node_modules/pdfjs-dist/**/*",
+      "./node_modules/@napi-rs/canvas/**/*",
+      "./node_modules/@napi-rs/canvas-*/**/*",
+    ],
   },
 };
 
