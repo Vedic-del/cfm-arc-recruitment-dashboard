@@ -23,6 +23,11 @@ export async function createCandidate(input: CreateCandidateInput): Promise<Cand
   return data as Candidate;
 }
 
+export async function updateCandidate(id: string, input: CreateCandidateInput): Promise<void> {
+  const { error } = await supabase.from('candidates').update(input).eq('id', id);
+  if (error) throw new Error(`updateCandidate failed: ${error.message}`);
+}
+
 export async function uploadResume(candidateId: string, file: File): Promise<string> {
   const path = `${candidateId}/${file.name}`;
   const { error } = await supabase.storage.from('resumes').upload(path, file, { upsert: true });
