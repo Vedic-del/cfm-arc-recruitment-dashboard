@@ -29,6 +29,7 @@ export interface Opening {
   title: string;
   department: string | null;
   level: string | null;
+  description: string | null;
   hiring_manager: string | null;
   positions_count: number;
   date_opened: string;

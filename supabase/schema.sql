@@ -93,3 +93,5 @@ create policy "Allow anon reads on resumes bucket"
 on storage.objects for select
 to anon
 using (bucket_id = 'resumes');
+
+alter table openings add column description text;
