@@ -1,7 +1,9 @@
 'use server';
 
-import { createCandidate, uploadResume } from '@/lib/db/candidates';
+import { createCandidate } from '@/lib/db/candidates';
 import { linkCandidateToOpening } from '@/lib/db/pipeline';
+import { extractResumeText } from '@/lib/resumeParsing';
+import { summarizeResume } from '@/lib/resumeSummary';
 import { redirect } from 'next/navigation';
 
 export async function createCandidateAction(formData: FormData) {
@@ -9,6 +11,19 @@ export async function createCandidateAction(formData: FormData) {
   if (!name.trim()) throw new Error('Name is required');
   const openingId = String(formData.get('opening_id') ?? '');
   if (!openingId) throw new Error('An opening must be selected');
+
+  let resumeSummary: string | undefined;
+  const resumeFile = formData.get('resume') as File | null;
+  if (resumeFile && resumeFile.size > 0) {
+    try {
+      const text = await extractResumeText(resumeFile);
+      if (text && text.trim().length > 0) {
+        resumeSummary = await summarizeResume(text);
+      }
+    } catch (error) {
+      console.error('Resume extraction/summarization failed:', error);
+    }
+  }
 
   const candidate = await createCandidate({
     name,
@@ -30,12 +45,8 @@ export async function createCandidateAction(formData: FormData) {
     notice_period: String(formData.get('notice_period') ?? '') || undefined,
     source: String(formData.get('source') ?? '') || undefined,
     tags: String(formData.get('tags') ?? '') || undefined,
+    resume_summary: resumeSummary,
   });
-
-  const resumeFile = formData.get('resume') as File | null;
-  if (resumeFile && resumeFile.size > 0) {
-    await uploadResume(candidate.id, resumeFile);
-  }
 
   await linkCandidateToOpening(candidate.id, openingId);
   redirect(`/candidates/${candidate.id}`);

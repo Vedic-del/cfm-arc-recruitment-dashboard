@@ -15,6 +15,7 @@ export interface CreateCandidateInput {
   notice_period?: string;
   source?: string;
   tags?: string;
+  resume_summary?: string;
 }
 
 export async function createCandidate(input: CreateCandidateInput): Promise<Candidate> {
