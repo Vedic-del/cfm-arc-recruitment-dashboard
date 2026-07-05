@@ -41,6 +41,12 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
         </div>
         <div className="flex gap-2">
           <Link
+            href={`/openings/${opening.id}/edit`}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
+          >
+            Edit
+          </Link>
+          <Link
             href={`/candidates/new?openingId=${opening.id}`}
             className="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
           >
@@ -56,6 +62,16 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
           </form>
         </div>
       </div>
+
+      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-2 font-display text-sm font-semibold uppercase tracking-wide text-slate">Job description</h2>
+        {opening.description ? (
+          <p className="whitespace-pre-wrap text-sm text-ink">{opening.description}</p>
+        ) : (
+          <p className="text-sm italic text-slate">No JD added yet — click Edit to add one.</p>
+        )}
+      </div>
+
       <PipelineBoard openingId={opening.id} cards={cards} />
     </div>
   );
