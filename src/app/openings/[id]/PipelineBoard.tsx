@@ -47,18 +47,37 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
   const [links, setLinks] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [scores, setScores] = useState<Record<string, { score: number; rationale: string }>>({});
+  const [pendingStage, setPendingStage] = useState<Record<string, boolean>>({});
+  const [pendingLink, setPendingLink] = useState<Record<string, boolean>>({});
+  const [pendingMatch, setPendingMatch] = useState<Record<string, boolean>>({});
+
+  async function handleAdvanceStage(candidateOpeningId: string, newStage: Stage) {
+    setPendingStage((prev) => ({ ...prev, [candidateOpeningId]: true }));
+    try {
+      await advanceStageAction(candidateOpeningId, openingId, newStage);
+      setErrors((prev) => ({ ...prev, [candidateOpeningId]: '' }));
+    } catch {
+      setErrors((prev) => ({ ...prev, [candidateOpeningId]: 'Failed to update stage — try again.' }));
+    } finally {
+      setPendingStage((prev) => ({ ...prev, [candidateOpeningId]: false }));
+    }
+  }
 
   async function handleGenerateLink(candidateOpeningId: string, stage: Stage) {
+    setPendingLink((prev) => ({ ...prev, [candidateOpeningId]: true }));
     try {
       const token = await generateScorecardAction(candidateOpeningId, stage);
       setLinks((prev) => ({ ...prev, [candidateOpeningId]: `${window.location.origin}/scorecard/${token}` }));
       setErrors((prev) => ({ ...prev, [candidateOpeningId]: '' }));
     } catch {
       setErrors((prev) => ({ ...prev, [candidateOpeningId]: 'Failed to generate link — try again.' }));
+    } finally {
+      setPendingLink((prev) => ({ ...prev, [candidateOpeningId]: false }));
     }
   }
 
   async function handleScoreMatch(candidateOpeningId: string) {
+    setPendingMatch((prev) => ({ ...prev, [candidateOpeningId]: true }));
     try {
       const result = await scoreMatchAction(candidateOpeningId);
       setScores((prev) => ({ ...prev, [candidateOpeningId]: result }));
@@ -68,6 +87,8 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
         ...prev,
         [candidateOpeningId]: 'Failed to score match — make sure both a resume summary and a job description exist.',
       }));
+    } finally {
+      setPendingMatch((prev) => ({ ...prev, [candidateOpeningId]: false }));
     }
   }
 
@@ -109,25 +130,23 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
               <select
                 key={card.currentStage}
                 defaultValue={card.currentStage}
-                onChange={async (e) => {
-                  try {
-                    await advanceStageAction(card.candidateOpeningId, openingId, e.target.value as Stage);
-                    setErrors((prev) => ({ ...prev, [card.candidateOpeningId]: '' }));
-                  } catch {
-                    setErrors((prev) => ({ ...prev, [card.candidateOpeningId]: 'Failed to update stage — try again.' }));
-                  }
-                }}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-ink focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition"
+                disabled={pendingStage[card.candidateOpeningId]}
+                onChange={(e) => handleAdvanceStage(card.candidateOpeningId, e.target.value as Stage)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-ink focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {STAGES.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
+              {pendingStage[card.candidateOpeningId] && (
+                <span className="text-xs text-slate">Updating…</span>
+              )}
               <button
                 onClick={() => handleGenerateLink(card.candidateOpeningId, card.currentStage)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100"
+                disabled={pendingLink[card.candidateOpeningId]}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Generate Scorecard Link
+                {pendingLink[card.candidateOpeningId] ? 'Generating…' : 'Generate Scorecard Link'}
               </button>
             </div>
             <div className="mt-2 flex items-center gap-2">
@@ -141,9 +160,10 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
               ) : (
                 <button
                   onClick={() => handleScoreMatch(card.candidateOpeningId)}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100"
+                  disabled={pendingMatch[card.candidateOpeningId]}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Match against JD
+                  {pendingMatch[card.candidateOpeningId] ? 'Scoring…' : 'Match against JD'}
                 </button>
               )}
             </div>

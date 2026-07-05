@@ -1,5 +1,6 @@
 import { getScorecardByToken } from '@/lib/db/scorecards';
 import { submitScorecardAction } from './actions';
+import { SubmitButton } from '@/components/SubmitButton';
 
 export default async function ScorecardPage({
   params,
@@ -73,12 +74,9 @@ export default async function ScorecardPage({
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition"
           />
         </div>
-        <button
-          type="submit"
-          className="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
-        >
+        <SubmitButton pendingText="Submitting…" className="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60">
           Submit Feedback
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

@@ -1,5 +1,6 @@
 import { getCandidate } from '@/lib/db/candidates';
 import { updateCandidateAction } from './actions';
+import { SubmitButton } from '@/components/SubmitButton';
 
 const INPUT = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition';
 const LABEL = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate';
@@ -84,12 +85,9 @@ export default async function EditCandidatePage({ params }: { params: Promise<{ 
           <label className={LABEL}>Tags / notes</label>
           <input name="tags" defaultValue={candidate.tags ?? ''} className={INPUT} />
         </div>
-        <button
-          type="submit"
-          className="mt-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
-        >
+        <SubmitButton pendingText="Saving…" className="mt-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60">
           Save Changes
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

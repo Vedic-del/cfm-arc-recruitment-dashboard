@@ -1,4 +1,5 @@
 import { createOpeningAction } from './actions';
+import { SubmitButton } from '@/components/SubmitButton';
 
 const INPUT = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition';
 const LABEL = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate';
@@ -55,12 +56,9 @@ export default function NewOpeningPage() {
             <input name="target_close_date" type="date" className={INPUT} />
           </div>
         </div>
-        <button
-          type="submit"
-          className="mt-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
-        >
+        <SubmitButton pendingText="Creating…" className="mt-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60">
           Create Opening
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

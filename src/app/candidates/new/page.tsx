@@ -1,5 +1,6 @@
 import { listOpenings } from '@/lib/db/openings';
 import { createCandidateAction } from './actions';
+import { SubmitButton } from '@/components/SubmitButton';
 
 const INPUT = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition';
 const LABEL = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate';
@@ -96,12 +97,9 @@ export default async function NewCandidatePage({
           <label className={LABEL}>Resume</label>
           <input name="resume" type="file" accept=".pdf,.doc,.docx" className={`${INPUT} file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-forest-900`} />
         </div>
-        <button
-          type="submit"
-          className="mt-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
-        >
+        <SubmitButton pendingText="Adding candidate — reading resume if attached, this can take a few seconds…" className="mt-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60">
           Add Candidate
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

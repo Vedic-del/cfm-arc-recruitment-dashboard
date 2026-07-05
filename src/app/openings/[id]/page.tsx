@@ -3,6 +3,7 @@ import { getOpening } from '@/lib/db/openings';
 import { getPipelineForOpening } from '@/lib/db/pipeline';
 import { PipelineBoard } from './PipelineBoard';
 import { markOpeningFilledAction } from './actions';
+import { SubmitButton } from '@/components/SubmitButton';
 
 const STATUS_STYLES: Record<string, string> = {
   open: 'bg-green-100 text-forest-900',
@@ -53,12 +54,7 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
             + Add Candidate
           </Link>
           <form action={boundMarkFilled}>
-            <button
-              type="submit"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
-            >
-              Mark Filled
-            </button>
+            <SubmitButton variant="secondary" pendingText="Saving…">Mark Filled</SubmitButton>
           </form>
         </div>
       </div>

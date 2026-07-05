@@ -4,6 +4,7 @@ import { getCandidateOpenings, getPipelineHistory } from '@/lib/db/pipeline';
 import { getScorecardsForCandidateOpening } from '@/lib/db/scorecards';
 import { listOpenings } from '@/lib/db/openings';
 import { linkToOpeningAction } from './actions';
+import { SubmitButton } from '@/components/SubmitButton';
 
 const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wide text-slate';
 const FIELD_VALUE = 'text-sm text-ink';
@@ -149,12 +150,9 @@ export default async function CandidateProfilePage({ params }: { params: Promise
             <option key={o.id} value={o.id}>{o.title}</option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="rounded-lg bg-forest-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
-        >
+        <SubmitButton pendingText="Linking…" className="rounded-lg bg-forest-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60">
           Link
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );
