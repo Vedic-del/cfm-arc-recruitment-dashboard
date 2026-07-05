@@ -92,6 +92,12 @@ export default async function CandidateProfilePage({ params }: { params: Promise
               <p className="font-medium text-ink">
                 {co.openingTitle} <span className="text-slate">—</span> <span className="text-forest-900">{co.current_stage}</span>
               </p>
+              {co.match_score !== null && (
+                <p className="mt-1 text-sm text-slate">
+                  Match score: <span className="font-semibold text-forest-900">{co.match_score}/100</span>
+                  {co.match_rationale && <span> — {co.match_rationale}</span>}
+                </p>
+              )}
               <ul className="mt-2 flex flex-col gap-1 text-sm text-slate">
                 {history.map((h) => (
                   <li key={h.id} className="flex items-center gap-2">
