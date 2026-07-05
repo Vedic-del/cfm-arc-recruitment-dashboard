@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabaseClient';
 import type { CandidateOpening, PipelineEvent, Stage } from '@/lib/types';
 import { isStuck, averageTimeInStage } from '@/lib/pipelineLogic';
+import { groqChatCompletion } from '@/lib/groqClient';
 
 export async function linkCandidateToOpening(
   candidateId: string,
@@ -39,6 +40,8 @@ export interface PipelineCard {
   currentStage: Stage;
   latestEnteredAt: string;
   stuck: boolean;
+  matchScore: number | null;
+  matchRationale: string | null;
 }
 
 interface PipelineCardRow {
@@ -47,6 +50,8 @@ interface PipelineCardRow {
   candidate_id: string;
   candidates: { name: string };
   pipeline_events: { stage: Stage; entered_at: string }[];
+  match_score: number | null;
+  match_rationale: string | null;
 }
 
 function toPipelineCard(row: PipelineCardRow): PipelineCard {
@@ -59,13 +64,15 @@ function toPipelineCard(row: PipelineCardRow): PipelineCard {
     currentStage: row.current_stage,
     latestEnteredAt: latest.entered_at,
     stuck: isStuck(events),
+    matchScore: row.match_score,
+    matchRationale: row.match_rationale,
   };
 }
 
 export async function getPipelineForOpening(openingId: string): Promise<PipelineCard[]> {
   const { data, error } = await supabase
     .from('candidate_openings')
-    .select('id, current_stage, candidate_id, candidates(name), pipeline_events(stage, entered_at)')
+    .select('id, current_stage, candidate_id, match_score, match_rationale, candidates(name), pipeline_events(stage, entered_at)')
     .eq('opening_id', openingId);
   if (error) throw new Error(`getPipelineForOpening failed: ${error.message}`);
   return (data as unknown as PipelineCardRow[]).map(toPipelineCard);
@@ -99,7 +106,7 @@ export async function getCandidateOpenings(
 export async function getStuckCandidates(): Promise<PipelineCard[]> {
   const { data, error } = await supabase
     .from('candidate_openings')
-    .select('id, current_stage, candidate_id, candidates(name), pipeline_events(stage, entered_at)')
+    .select('id, current_stage, candidate_id, match_score, match_rationale, candidates(name), pipeline_events(stage, entered_at)')
     .not('current_stage', 'in', '(Joined,Rejected,Dropped)');
   if (error) throw new Error(`getStuckCandidates failed: ${error.message}`);
   return (data as unknown as PipelineCardRow[]).map(toPipelineCard).filter((c) => c.stuck);
@@ -127,4 +134,59 @@ export async function getAverageTimeInStage(): Promise<Record<string, number>> {
     grouped.set(row.candidate_opening_id, list);
   }
   return averageTimeInStage(Array.from(grouped.values()));
+}
+
+interface ScoreMatchRow {
+  id: string;
+  candidates: { resume_summary: string | null };
+  openings: { description: string | null };
+}
+
+export async function scoreMatch(candidateOpeningId: string): Promise<{ score: number; rationale: string }> {
+  const { data, error } = await supabase
+    .from('candidate_openings')
+    .select('id, candidates(resume_summary), openings(description)')
+    .eq('id', candidateOpeningId)
+    .single();
+  if (error) throw new Error(`scoreMatch fetch failed: ${error.message}`);
+
+  const row = data as unknown as ScoreMatchRow;
+  const resumeSummary = row.candidates.resume_summary;
+  const jd = row.openings.description;
+  if (!resumeSummary || !jd) {
+    throw new Error('scoreMatch requires both a resume summary and a job description');
+  }
+
+  const prompt = `You are helping an HR team score how well a candidate fits a role.
+
+Job description:
+"""
+${jd}
+"""
+
+Candidate summary:
+"""
+${resumeSummary}
+"""
+
+Respond with ONLY a JSON object of the exact shape {"score": <integer 0-100>, "rationale": "<one or two sentence explanation>"} and nothing else — no markdown, no code fences.`;
+
+  const raw = await groqChatCompletion(prompt);
+  let parsed: { score: number; rationale: string };
+  try {
+    parsed = JSON.parse(raw.trim());
+  } catch {
+    throw new Error(`scoreMatch: Groq response was not valid JSON: ${raw}`);
+  }
+  if (typeof parsed.score !== 'number' || typeof parsed.rationale !== 'string') {
+    throw new Error(`scoreMatch: Groq response missing expected fields: ${raw}`);
+  }
+
+  const { error: updateError } = await supabase
+    .from('candidate_openings')
+    .update({ match_score: parsed.score, match_rationale: parsed.rationale })
+    .eq('id', candidateOpeningId);
+  if (updateError) throw new Error(`scoreMatch update failed: ${updateError.message}`);
+
+  return parsed;
 }
