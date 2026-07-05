@@ -50,6 +50,11 @@ export async function deleteCandidate(id: string): Promise<void> {
   if (error) throw new Error(`deleteCandidate failed: ${error.message}`);
 }
 
+export async function deleteCandidates(ids: string[]): Promise<void> {
+  const { error } = await supabase.from('candidates').delete().in('id', ids);
+  if (error) throw new Error(`deleteCandidates failed: ${error.message}`);
+}
+
 export async function uploadResume(candidateId: string, file: File): Promise<string> {
   const path = `${candidateId}/${file.name}`;
   const { error } = await supabase.storage.from('resumes').upload(path, file, { upsert: true });

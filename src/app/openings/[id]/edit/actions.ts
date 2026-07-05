@@ -1,6 +1,7 @@
 'use server';
 
 import { updateOpening } from '@/lib/db/openings';
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { Priority } from '@/lib/types';
 
@@ -17,5 +18,7 @@ export async function updateOpeningAction(openingId: string, formData: FormData)
     priority: (formData.get('priority') as Priority) ?? 'normal',
     target_close_date: String(formData.get('target_close_date') ?? '') || null,
   });
+  revalidatePath(`/openings/${openingId}`);
+  revalidatePath('/openings');
   redirect(`/openings/${openingId}`);
 }

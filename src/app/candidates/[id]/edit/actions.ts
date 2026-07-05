@@ -1,6 +1,7 @@
 'use server';
 
 import { updateCandidate } from '@/lib/db/candidates';
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 export async function updateCandidateAction(candidateId: string, formData: FormData) {
@@ -27,5 +28,7 @@ export async function updateCandidateAction(candidateId: string, formData: FormD
     source: String(formData.get('source') ?? '') || null,
     tags: String(formData.get('tags') ?? '') || null,
   });
+  revalidatePath(`/candidates/${candidateId}`);
+  revalidatePath('/candidates');
   redirect(`/candidates/${candidateId}`);
 }

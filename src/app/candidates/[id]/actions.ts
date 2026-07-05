@@ -10,9 +10,13 @@ export async function linkToOpeningAction(candidateId: string, formData: FormDat
   if (!openingId) throw new Error('An opening must be selected');
   await linkCandidateToOpening(candidateId, openingId);
   revalidatePath(`/candidates/${candidateId}`);
+  revalidatePath(`/openings/${openingId}`);
+  revalidatePath('/');
 }
 
 export async function deleteCandidateAction(candidateId: string) {
   await deleteCandidate(candidateId);
+  revalidatePath('/candidates');
+  revalidatePath('/');
   redirect('/candidates');
 }

@@ -52,10 +52,10 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
   const [pendingLink, setPendingLink] = useState<Record<string, boolean>>({});
   const [pendingMatch, setPendingMatch] = useState<Record<string, boolean>>({});
 
-  async function handleAdvanceStage(candidateOpeningId: string, newStage: Stage) {
+  async function handleAdvanceStage(candidateOpeningId: string, candidateId: string, newStage: Stage) {
     setPendingStage((prev) => ({ ...prev, [candidateOpeningId]: true }));
     try {
-      await advanceStageAction(candidateOpeningId, openingId, newStage);
+      await advanceStageAction(candidateOpeningId, openingId, candidateId, newStage);
       setErrors((prev) => ({ ...prev, [candidateOpeningId]: '' }));
     } catch {
       setErrors((prev) => ({ ...prev, [candidateOpeningId]: 'Failed to update stage — try again.' }));
@@ -132,7 +132,7 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
                 key={card.currentStage}
                 defaultValue={card.currentStage}
                 disabled={pendingStage[card.candidateOpeningId]}
-                onChange={(e) => handleAdvanceStage(card.candidateOpeningId, e.target.value as Stage)}
+                onChange={(e) => handleAdvanceStage(card.candidateOpeningId, card.candidateId, e.target.value as Stage)}
                 className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-ink focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {STAGES.map((s) => (

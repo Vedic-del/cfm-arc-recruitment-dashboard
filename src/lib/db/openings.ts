@@ -63,6 +63,11 @@ export async function deleteOpening(id: string): Promise<void> {
   if (error) throw new Error(`deleteOpening failed: ${error.message}`);
 }
 
+export async function deleteOpenings(ids: string[]): Promise<void> {
+  const { error } = await supabase.from('openings').delete().in('id', ids);
+  if (error) throw new Error(`deleteOpenings failed: ${error.message}`);
+}
+
 export async function averageTimeToFill(): Promise<number | null> {
   const { data, error } = await supabase
     .from('openings')

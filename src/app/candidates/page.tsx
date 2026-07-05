@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { listCandidates } from '@/lib/db/candidates';
+import { CandidatesTable } from './CandidatesTable';
 
 const INPUT = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition';
 
@@ -45,32 +46,7 @@ export default async function CandidatesPage({
           <p className="text-sm text-slate">No candidates match yet — try widening the filters, or add a new candidate.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate">
-                <th className="p-3">Name</th>
-                <th className="p-3">Experience</th>
-                <th className="p-3">Expected Salary</th>
-                <th className="p-3">Source</th>
-              </tr>
-            </thead>
-            <tbody>
-              {candidates.map((c) => (
-                <tr key={c.id} className="border-b border-slate-200 transition-colors last:border-0 hover:bg-slate-100/60">
-                  <td className="p-3">
-                    <Link href={`/candidates/${c.id}`} className="font-medium text-forest-700 hover:text-forest-900 hover:underline">
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="p-3 text-ink">{c.years_experience_total ?? '—'}</td>
-                  <td className="p-3 text-ink">{c.expected_salary ?? '—'}</td>
-                  <td className="p-3 text-slate">{c.source ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <CandidatesTable candidates={candidates} />
       )}
     </div>
   );

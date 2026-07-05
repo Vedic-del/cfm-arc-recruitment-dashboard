@@ -4,6 +4,7 @@ import { createCandidate } from '@/lib/db/candidates';
 import { linkCandidateToOpening } from '@/lib/db/pipeline';
 import { extractResumeText } from '@/lib/resumeParsing';
 import { extractResumeFields, type ExtractedResumeFields } from '@/lib/resumeExtraction';
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 export async function parseResumeAction(
@@ -52,5 +53,8 @@ export async function createCandidateAction(formData: FormData) {
   });
 
   await linkCandidateToOpening(candidate.id, openingId);
+  revalidatePath('/candidates');
+  revalidatePath(`/openings/${openingId}`);
+  revalidatePath('/');
   redirect(`/candidates/${candidate.id}`);
 }
