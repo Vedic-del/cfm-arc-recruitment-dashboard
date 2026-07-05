@@ -1593,7 +1593,8 @@ Create `src/app/candidates/[id]/page.tsx`:
 
 ```tsx
 import { getCandidate, getResumeUrl } from '@/lib/db/candidates';
-import { getCandidateOpenings, getPipelineHistory, getScorecardsForCandidateOpening } from '@/lib/db/pipeline';
+import { getCandidateOpenings, getPipelineHistory } from '@/lib/db/pipeline';
+import { getScorecardsForCandidateOpening } from '@/lib/db/scorecards';
 import { listOpenings } from '@/lib/db/openings';
 import { linkToOpeningAction } from './actions';
 
