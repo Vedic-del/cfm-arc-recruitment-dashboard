@@ -41,8 +41,16 @@ export interface PipelineCard {
   stuck: boolean;
 }
 
-function toPipelineCard(row: any): PipelineCard {
-  const events = row.pipeline_events as PipelineEvent[];
+interface PipelineCardRow {
+  id: string;
+  current_stage: Stage;
+  candidate_id: string;
+  candidates: { name: string };
+  pipeline_events: { stage: Stage; entered_at: string }[];
+}
+
+function toPipelineCard(row: PipelineCardRow): PipelineCard {
+  const events = row.pipeline_events;
   const latest = events.reduce((a, b) => (new Date(a.entered_at) > new Date(b.entered_at) ? a : b));
   return {
     candidateOpeningId: row.id,
@@ -60,7 +68,7 @@ export async function getPipelineForOpening(openingId: string): Promise<Pipeline
     .select('id, current_stage, candidate_id, candidates(name), pipeline_events(stage, entered_at)')
     .eq('opening_id', openingId);
   if (error) throw new Error(`getPipelineForOpening failed: ${error.message}`);
-  return (data as any[]).map(toPipelineCard);
+  return (data as unknown as PipelineCardRow[]).map(toPipelineCard);
 }
 
 export async function getPipelineHistory(candidateOpeningId: string): Promise<PipelineEvent[]> {
@@ -73,6 +81,10 @@ export async function getPipelineHistory(candidateOpeningId: string): Promise<Pi
   return data as PipelineEvent[];
 }
 
+interface CandidateOpeningWithOpeningRow extends CandidateOpening {
+  openings: { title: string };
+}
+
 export async function getCandidateOpenings(
   candidateId: string
 ): Promise<(CandidateOpening & { openingTitle: string })[]> {
@@ -81,7 +93,7 @@ export async function getCandidateOpenings(
     .select('*, openings(title)')
     .eq('candidate_id', candidateId);
   if (error) throw new Error(`getCandidateOpenings failed: ${error.message}`);
-  return (data as any[]).map((row) => ({ ...row, openingTitle: row.openings.title }));
+  return (data as CandidateOpeningWithOpeningRow[]).map((row) => ({ ...row, openingTitle: row.openings.title }));
 }
 
 export async function getStuckCandidates(): Promise<PipelineCard[]> {
@@ -90,7 +102,7 @@ export async function getStuckCandidates(): Promise<PipelineCard[]> {
     .select('id, current_stage, candidate_id, candidates(name), pipeline_events(stage, entered_at)')
     .not('current_stage', 'in', '(Joined,Rejected,Dropped)');
   if (error) throw new Error(`getStuckCandidates failed: ${error.message}`);
-  return (data as any[]).map(toPipelineCard).filter((c) => c.stuck);
+  return (data as unknown as PipelineCardRow[]).map(toPipelineCard).filter((c) => c.stuck);
 }
 
 export async function getStageCounts(): Promise<Record<string, number>> {

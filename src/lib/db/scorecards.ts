@@ -15,6 +15,13 @@ export interface ScorecardWithContext extends Scorecard {
   openingTitle: string;
 }
 
+interface ScorecardRow extends Scorecard {
+  candidate_openings: {
+    candidates: { name: string };
+    openings: { title: string };
+  };
+}
+
 export async function getScorecardByToken(token: string): Promise<ScorecardWithContext | null> {
   const { data, error } = await supabase
     .from('scorecards')
@@ -22,7 +29,7 @@ export async function getScorecardByToken(token: string): Promise<ScorecardWithC
     .eq('token', token)
     .single();
   if (error) return null;
-  const row = data as any;
+  const row = data as ScorecardRow;
   return {
     ...row,
     candidateName: row.candidate_openings.candidates.name,
