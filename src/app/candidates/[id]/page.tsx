@@ -4,10 +4,19 @@ import { getScorecardsForCandidateOpening } from '@/lib/db/scorecards';
 import { listOpenings } from '@/lib/db/openings';
 import { linkToOpeningAction } from './actions';
 
+const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wide text-slate';
+const FIELD_VALUE = 'text-sm text-ink';
+
 export default async function CandidateProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const candidate = await getCandidate(id);
-  if (!candidate) return <div>Candidate not found</div>;
+  if (!candidate) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center">
+        <p className="text-sm text-slate">Candidate not found.</p>
+      </div>
+    );
+  }
 
   const candidateOpenings = await getCandidateOpenings(id);
   const openings = await listOpenings();
@@ -21,61 +30,108 @@ export default async function CandidateProfilePage({ params }: { params: Promise
     }))
   );
 
-  return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold">{candidate.name}</h1>
-      <p className="text-sm text-gray-600">{candidate.current_designation} at {candidate.current_employer}</p>
-      <dl className="grid grid-cols-2 gap-2 mt-4 text-sm">
-        <dt className="font-medium">Phone</dt><dd>{candidate.phone}</dd>
-        <dt className="font-medium">Email</dt><dd>{candidate.email}</dd>
-        <dt className="font-medium">Location</dt><dd>{candidate.location}</dd>
-        <dt className="font-medium">Experience (total)</dt><dd>{candidate.years_experience_total}</dd>
-        <dt className="font-medium">Experience (relevant)</dt><dd>{candidate.years_experience_relevant}</dd>
-        <dt className="font-medium">Current salary</dt><dd>{candidate.current_salary}</dd>
-        <dt className="font-medium">Expected salary</dt><dd>{candidate.expected_salary}</dd>
-        <dt className="font-medium">Notice period</dt><dd>{candidate.notice_period}</dd>
-        <dt className="font-medium">Source</dt><dd>{candidate.source}</dd>
-        <dt className="font-medium">Tags</dt><dd>{candidate.tags}</dd>
-      </dl>
-      {candidate.resume_path && (
-        <a href={getResumeUrl(candidate.resume_path)} target="_blank" className="text-blue-600 underline block mt-2">
-          View resume
-        </a>
-      )}
+  const fields: [string, string | number | null][] = [
+    ['Phone', candidate.phone],
+    ['Email', candidate.email],
+    ['Location', candidate.location],
+    ['Experience (total)', candidate.years_experience_total],
+    ['Experience (relevant)', candidate.years_experience_relevant],
+    ['Current salary', candidate.current_salary],
+    ['Expected salary', candidate.expected_salary],
+    ['Notice period', candidate.notice_period],
+    ['Source', candidate.source],
+    ['Tags', candidate.tags],
+  ];
 
-      <h2 className="text-lg font-semibold mt-6">Pipeline history</h2>
-      {pipelineDetails.map(({ co, history, scorecards }) => (
-        <div key={co.id} className="border rounded p-3 mt-2">
-          <p className="font-medium">{co.openingTitle} — {co.current_stage}</p>
-          <ul className="text-sm list-disc pl-5">
-            {history.map((h) => (
-              <li key={h.id}>{h.stage} — {new Date(h.entered_at).toLocaleDateString()}</li>
-            ))}
-          </ul>
-          {scorecards.length > 0 && (
-            <div className="mt-2 text-sm">
-              <p className="font-medium">Scorecards</p>
-              <ul className="list-disc pl-5">
-                {scorecards.map((s) => (
-                  <li key={s.id}>
-                    {s.stage}: {s.submitted_at ? `${s.score} — ${s.comments}` : 'pending'}
+  return (
+    <div className="mx-auto max-w-2xl animate-fade-in-up">
+      <h1 className="font-display text-2xl font-bold tracking-tight text-forest-950">{candidate.name}</h1>
+      <p className="mt-1 text-sm text-slate">
+        {candidate.current_designation ?? 'No title on file'}
+        {candidate.current_employer ? ` at ${candidate.current_employer}` : ''}
+      </p>
+
+      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+          {fields.map(([label, value]) => (
+            <div key={label}>
+              <dt className={FIELD_LABEL}>{label}</dt>
+              <dd className={FIELD_VALUE}>{value ?? '—'}</dd>
+            </div>
+          ))}
+        </dl>
+        {candidate.resume_path && (
+          <a
+            href={getResumeUrl(candidate.resume_path)}
+            target="_blank"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-forest-700 hover:text-forest-900 hover:underline"
+          >
+            View resume →
+          </a>
+        )}
+      </div>
+
+      <h2 className="mt-8 mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">Pipeline history</h2>
+      {pipelineDetails.length === 0 ? (
+        <p className="text-sm text-slate">Not linked to any opening yet.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {pipelineDetails.map(({ co, history, scorecards }) => (
+            <div key={co.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="font-medium text-ink">
+                {co.openingTitle} <span className="text-slate">—</span> <span className="text-forest-900">{co.current_stage}</span>
+              </p>
+              <ul className="mt-2 flex flex-col gap-1 text-sm text-slate">
+                {history.map((h) => (
+                  <li key={h.id} className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    {h.stage} — {new Date(h.entered_at).toLocaleDateString()}
                   </li>
                 ))}
               </ul>
+              {scorecards.length > 0 && (
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                  <p className={FIELD_LABEL}>Scorecards</p>
+                  <ul className="mt-1.5 flex flex-col gap-1 text-sm">
+                    {scorecards.map((s) => (
+                      <li key={s.id} className="text-ink">
+                        <span className="font-medium">{s.stage}:</span>{' '}
+                        {s.submitted_at ? (
+                          <>
+                            {s.score} — {s.comments}
+                          </>
+                        ) : (
+                          <span className="italic text-slate">pending</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
-      ))}
+      )}
 
-      <h2 className="text-lg font-semibold mt-6">Link to another opening</h2>
-      <form action={boundAction} className="flex gap-2 mt-2">
-        <select name="opening_id" required defaultValue="" className="border p-2 rounded">
+      <h2 className="mt-8 mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">Link to another opening</h2>
+      <form action={boundAction} className="flex gap-2">
+        <select
+          name="opening_id"
+          required
+          defaultValue=""
+          className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-ink focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition"
+        >
           <option value="" disabled>Select opening</option>
           {openings.map((o) => (
             <option key={o.id} value={o.id}>{o.title}</option>
           ))}
         </select>
-        <button type="submit" className="bg-blue-600 text-white rounded px-4 py-2">Link</button>
+        <button
+          type="submit"
+          className="rounded-lg bg-forest-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
+        >
+          Link
+        </button>
       </form>
     </div>
   );

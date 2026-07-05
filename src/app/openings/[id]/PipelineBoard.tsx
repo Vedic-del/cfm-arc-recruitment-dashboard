@@ -5,6 +5,38 @@ import { STAGES, type Stage } from '@/lib/types';
 import { advanceStageAction, generateScorecardAction } from './actions';
 import type { PipelineCard } from '@/lib/db/pipeline';
 
+const PATH: Stage[] = ['Sourced', 'Screening', 'Round 1', 'Round 2', 'HR/Offer Discussion', 'Offer', 'Joined'];
+
+function ProgressRail({ stage }: { stage: Stage }) {
+  if (stage === 'Rejected' || stage === 'Dropped') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate">
+        <span className="h-1.5 w-1.5 rounded-full bg-slate" />
+        {stage}
+      </span>
+    );
+  }
+
+  const currentIndex = PATH.indexOf(stage);
+
+  return (
+    <div className="flex items-center gap-1" title={stage}>
+      {PATH.map((s, i) => {
+        const reached = i <= currentIndex;
+        const isCurrent = i === currentIndex;
+        return (
+          <span
+            key={s}
+            className={`h-2 w-2 rounded-full transition-all ${
+              reached ? 'bg-green-500' : 'bg-slate-200'
+            } ${isCurrent ? 'animate-pulse-glow ring-2 ring-green-400/50' : ''}`}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function PipelineBoard({ openingId, cards }: { openingId: string; cards: PipelineCard[] }) {
   const [links, setLinks] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -19,21 +51,36 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
     }
   }
 
+  if (cards.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center">
+        <p className="text-sm text-slate">No candidates linked to this opening yet.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {cards.map((card) => (
+    <div className="grid grid-cols-1 gap-3">
+      {cards.map((card, i) => (
         <div
           key={card.candidateOpeningId}
-          className={`border rounded p-4 ${card.stuck ? 'border-red-500 bg-red-50' : ''}`}
+          style={{ animationDelay: `${i * 40}ms` }}
+          className={`animate-fade-in-up rounded-xl border bg-white p-4 shadow-sm transition-all hover:shadow-md ${
+            card.stuck ? 'border-danger/30 bg-danger-bg/40' : 'border-slate-200'
+          }`}
         >
-          <div className="flex justify-between items-center">
-            <span className="font-medium">{card.candidateName}</span>
-            <span className="text-sm">
-              {card.currentStage}
-              {card.stuck ? ' — STUCK' : ''}
-            </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-medium text-ink">{card.candidateName}</span>
+            <div className="flex items-center gap-2">
+              <ProgressRail stage={card.currentStage} />
+              {card.stuck && (
+                <span className="rounded-full border border-danger/20 bg-danger-bg px-2 py-0.5 text-xs font-semibold text-danger">
+                  Stuck
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2 mt-2 items-center">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <select
               key={card.currentStage}
               defaultValue={card.currentStage}
@@ -45,7 +92,7 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
                   setErrors((prev) => ({ ...prev, [card.candidateOpeningId]: 'Failed to update stage — try again.' }));
                 }
               }}
-              className="border p-1 rounded"
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-ink focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition"
             >
               {STAGES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -53,18 +100,18 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
             </select>
             <button
               onClick={() => handleGenerateLink(card.candidateOpeningId, card.currentStage)}
-              className="bg-gray-200 rounded px-2 py-1 text-sm"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100"
             >
               Generate Scorecard Link
             </button>
           </div>
           {errors[card.candidateOpeningId] && (
-            <div className="mt-1 text-sm text-red-600">
+            <div className="mt-2 text-sm text-danger">
               {errors[card.candidateOpeningId]}
             </div>
           )}
           {links[card.candidateOpeningId] && (
-            <div className="mt-2 text-sm break-all bg-gray-100 p-2 rounded">
+            <div className="animate-fade-in-up mt-2 rounded-lg bg-green-100 p-2 text-sm break-all text-forest-900">
               {links[card.candidateOpeningId]}
             </div>
           )}

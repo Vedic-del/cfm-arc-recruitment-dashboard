@@ -1,21 +1,63 @@
 import { createOpeningAction } from './actions';
 
+const INPUT = 'w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-ink placeholder:text-slate focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 transition';
+const LABEL = 'mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate';
+
 export default function NewOpeningPage() {
   return (
-    <form action={createOpeningAction} className="max-w-lg flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Add Opening</h1>
-      <input name="title" placeholder="Role title" required className="border p-2 rounded" />
-      <input name="department" placeholder="Department" className="border p-2 rounded" />
-      <input name="level" placeholder="Level/Grade" className="border p-2 rounded" />
-      <input name="hiring_manager" placeholder="Hiring manager" className="border p-2 rounded" />
-      <input name="positions_count" type="number" defaultValue={1} min={1} className="border p-2 rounded" />
-      <input name="date_opened" type="date" className="border p-2 rounded" />
-      <select name="priority" defaultValue="normal" className="border p-2 rounded">
-        <option value="normal">Normal</option>
-        <option value="urgent">Urgent</option>
-      </select>
-      <input name="target_close_date" type="date" className="border p-2 rounded" />
-      <button type="submit" className="bg-blue-600 text-white rounded p-2">Create Opening</button>
-    </form>
+    <div className="mx-auto max-w-xl animate-fade-in-up">
+      <h1 className="font-display text-2xl font-bold tracking-tight text-forest-950">Add Opening</h1>
+      <p className="mt-1 text-sm text-slate">A new role to track through the pipeline.</p>
+
+      <form action={createOpeningAction} className="mt-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <label className={LABEL}>Role title</label>
+          <input name="title" placeholder="e.g. Recovery Analyst" required className={INPUT} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={LABEL}>Department</label>
+            <input name="department" placeholder="e.g. Recovery" className={INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Level / grade</label>
+            <input name="level" placeholder="e.g. Senior" className={INPUT} />
+          </div>
+        </div>
+        <div>
+          <label className={LABEL}>Hiring manager</label>
+          <input name="hiring_manager" placeholder="Who owns this role" className={INPUT} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={LABEL}>Positions</label>
+            <input name="positions_count" type="number" defaultValue={1} min={1} className={INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Priority</label>
+            <select name="priority" defaultValue="normal" className={INPUT}>
+              <option value="normal">Normal</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={LABEL}>Date opened</label>
+            <input name="date_opened" type="date" className={INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Target close date</label>
+            <input name="target_close_date" type="date" className={INPUT} />
+          </div>
+        </div>
+        <button
+          type="submit"
+          className="mt-2 rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
+        >
+          Create Opening
+        </button>
+      </form>
+    </div>
   );
 }
