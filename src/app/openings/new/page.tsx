@@ -28,6 +28,10 @@ export default function NewOpeningPage() {
           <label className={LABEL}>Hiring manager</label>
           <input name="hiring_manager" placeholder="Who owns this role" className={INPUT} />
         </div>
+        <div>
+          <label className={LABEL}>Job description</label>
+          <textarea name="description" placeholder="What does this role actually need?" rows={5} className={INPUT} />
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={LABEL}>Positions</label>

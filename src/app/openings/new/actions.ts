@@ -11,6 +11,7 @@ export async function createOpeningAction(formData: FormData) {
     title,
     department: String(formData.get('department') ?? '') || undefined,
     level: String(formData.get('level') ?? '') || undefined,
+    description: String(formData.get('description') ?? '') || undefined,
     hiring_manager: String(formData.get('hiring_manager') ?? '') || undefined,
     positions_count: Number(formData.get('positions_count') ?? 1),
     date_opened: String(formData.get('date_opened') ?? '') || undefined,
