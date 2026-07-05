@@ -1,6 +1,6 @@
 'use server';
 
-import { advanceStage } from '@/lib/db/pipeline';
+import { advanceStage, scoreMatch } from '@/lib/db/pipeline';
 import { generateScorecard } from '@/lib/db/scorecards';
 import { updateOpeningStatus } from '@/lib/db/openings';
 import { revalidatePath } from 'next/cache';
@@ -18,4 +18,8 @@ export async function generateScorecardAction(candidateOpeningId: string, stage:
 export async function markOpeningFilledAction(openingId: string) {
   await updateOpeningStatus(openingId, 'filled');
   revalidatePath(`/openings/${openingId}`);
+}
+
+export async function scoreMatchAction(candidateOpeningId: string): Promise<{ score: number; rationale: string }> {
+  return scoreMatch(candidateOpeningId);
 }
