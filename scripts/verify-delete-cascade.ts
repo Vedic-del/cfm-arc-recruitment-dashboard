@@ -7,36 +7,52 @@ async function main() {
   const { linkCandidateToOpening } = await import('../src/lib/db/pipeline');
   const { supabase } = await import('../src/lib/supabaseClient');
 
-  const opening = await createOpening({ title: 'Delete Cascade Verify Role' });
-  const candidate = await createCandidate({ name: 'Delete Cascade Verify Candidate' });
-  const co = await linkCandidateToOpening(candidate.id, opening.id);
-  console.log('Created opening', opening.id, 'candidate', candidate.id, 'link', co.id);
+  // Case 1: delete a candidate -> their pipeline link should go, opening should survive.
+  const openingA = await createOpening({ title: 'Delete Cascade Verify Role A' });
+  const candidateA = await createCandidate({ name: 'Delete Cascade Verify Candidate A' });
+  const linkA = await linkCandidateToOpening(candidateA.id, openingA.id);
 
-  let openingDeleteThrew = false;
-  try {
-    await deleteOpening(opening.id);
-  } catch (e) {
-    openingDeleteThrew = true;
-    console.log('deleteOpening threw as expected pre-migration:', (e as Error).message.slice(0, 120));
-  }
-  console.log('opening delete blocked by FK (expected true pre-migration):', openingDeleteThrew);
+  await deleteCandidate(candidateA.id);
 
-  const candidateStillExists = (await getCandidate(candidate.id)) !== null;
-  const openingStillExists = (await getOpening(opening.id)) !== null;
-  console.log('candidate still exists after blocked opening delete:', candidateStillExists);
-  console.log('opening still exists after blocked delete:', openingStillExists);
+  const candidateAGone = (await getCandidate(candidateA.id)) === null;
+  const openingASurvived = (await getOpening(openingA.id)) !== null;
+  const { data: linkARow } = await supabase.from('candidate_openings').select('id').eq('id', linkA.id).maybeSingle();
+  const linkAGone = linkARow === null;
 
-  // Manual cleanup respecting current (pre-migration) FK constraints.
-  await supabase.from('pipeline_events').delete().eq('candidate_opening_id', co.id);
-  await supabase.from('scorecards').delete().eq('candidate_opening_id', co.id);
-  await supabase.from('candidate_openings').delete().eq('id', co.id);
-  await deleteCandidate(candidate.id);
-  await deleteOpening(opening.id);
-  console.log('cleanup done, opening gone:', (await getOpening(opening.id)) === null, 'candidate gone:', (await getCandidate(candidate.id)) === null);
+  console.log('Case 1 (delete candidate):');
+  console.log('  candidate gone:', candidateAGone);
+  console.log('  opening survived:', openingASurvived);
+  console.log('  pipeline link gone:', linkAGone);
+
+  await deleteOpening(openingA.id); // cleanup
+
+  // Case 2: delete an opening -> its pipeline link should go, candidate should survive.
+  const openingB = await createOpening({ title: 'Delete Cascade Verify Role B' });
+  const candidateB = await createCandidate({ name: 'Delete Cascade Verify Candidate B' });
+  const linkB = await linkCandidateToOpening(candidateB.id, openingB.id);
+
+  await deleteOpening(openingB.id);
+
+  const openingBGone = (await getOpening(openingB.id)) === null;
+  const candidateBSurvived = (await getCandidate(candidateB.id)) !== null;
+  const { data: linkBRow } = await supabase.from('candidate_openings').select('id').eq('id', linkB.id).maybeSingle();
+  const linkBGone = linkBRow === null;
+
+  console.log('Case 2 (delete opening):');
+  console.log('  opening gone:', openingBGone);
+  console.log('  candidate survived:', candidateBSurvived);
+  console.log('  pipeline link gone:', linkBGone);
+
+  await deleteCandidate(candidateB.id); // cleanup
+
+  const allPassed =
+    candidateAGone && openingASurvived && linkAGone && openingBGone && candidateBSurvived && linkBGone;
+  console.log('ALL CHECKS PASSED:', allPassed);
+  if (!allPassed) process.exitCode = 1;
 }
 
 main()
-  .then(() => process.exit(0))
+  .then(() => process.exit(process.exitCode ?? 0))
   .catch((e) => {
     console.error(e);
     process.exit(1);
