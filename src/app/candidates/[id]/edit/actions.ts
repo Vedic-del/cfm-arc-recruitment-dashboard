@@ -8,24 +8,24 @@ export async function updateCandidateAction(candidateId: string, formData: FormD
   if (!name.trim()) throw new Error('Name is required');
   await updateCandidate(candidateId, {
     name,
-    phone: String(formData.get('phone') ?? '') || undefined,
-    email: String(formData.get('email') ?? '') || undefined,
-    location: String(formData.get('location') ?? '') || undefined,
-    current_employer: String(formData.get('current_employer') ?? '') || undefined,
-    current_designation: String(formData.get('current_designation') ?? '') || undefined,
+    phone: String(formData.get('phone') ?? '') || null,
+    email: String(formData.get('email') ?? '') || null,
+    location: String(formData.get('location') ?? '') || null,
+    current_employer: String(formData.get('current_employer') ?? '') || null,
+    current_designation: String(formData.get('current_designation') ?? '') || null,
     years_experience_total: formData.get('years_experience_total')
       ? Number(formData.get('years_experience_total'))
-      : undefined,
+      : null,
     years_experience_relevant: formData.get('years_experience_relevant')
       ? Number(formData.get('years_experience_relevant'))
-      : undefined,
-    current_salary: formData.get('current_salary') ? Number(formData.get('current_salary')) : undefined,
+      : null,
+    current_salary: formData.get('current_salary') ? Number(formData.get('current_salary')) : null,
     expected_salary: formData.get('expected_salary')
       ? Number(formData.get('expected_salary'))
-      : undefined,
-    notice_period: String(formData.get('notice_period') ?? '') || undefined,
-    source: String(formData.get('source') ?? '') || undefined,
-    tags: String(formData.get('tags') ?? '') || undefined,
+      : null,
+    notice_period: String(formData.get('notice_period') ?? '') || null,
+    source: String(formData.get('source') ?? '') || null,
+    tags: String(formData.get('tags') ?? '') || null,
   });
   redirect(`/candidates/${candidateId}`);
 }

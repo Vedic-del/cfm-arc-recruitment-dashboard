@@ -9,13 +9,13 @@ export async function updateOpeningAction(openingId: string, formData: FormData)
   if (!title.trim()) throw new Error('Title is required');
   await updateOpening(openingId, {
     title,
-    department: String(formData.get('department') ?? '') || undefined,
-    level: String(formData.get('level') ?? '') || undefined,
-    description: String(formData.get('description') ?? '') || undefined,
-    hiring_manager: String(formData.get('hiring_manager') ?? '') || undefined,
+    department: String(formData.get('department') ?? '') || null,
+    level: String(formData.get('level') ?? '') || null,
+    description: String(formData.get('description') ?? '') || null,
+    hiring_manager: String(formData.get('hiring_manager') ?? '') || null,
     positions_count: Number(formData.get('positions_count') ?? 1),
     priority: (formData.get('priority') as Priority) ?? 'normal',
-    target_close_date: String(formData.get('target_close_date') ?? '') || undefined,
+    target_close_date: String(formData.get('target_close_date') ?? '') || null,
   });
   redirect(`/openings/${openingId}`);
 }

@@ -42,7 +42,18 @@ export async function updateOpeningStatus(id: string, status: OpeningStatus): Pr
   if (error) throw new Error(`updateOpeningStatus failed: ${error.message}`);
 }
 
-export async function updateOpening(id: string, input: CreateOpeningInput): Promise<void> {
+export interface UpdateOpeningInput {
+  title: string;
+  department?: string | null;
+  level?: string | null;
+  description?: string | null;
+  hiring_manager?: string | null;
+  positions_count?: number;
+  priority?: Priority;
+  target_close_date?: string | null;
+}
+
+export async function updateOpening(id: string, input: UpdateOpeningInput): Promise<void> {
   const { error } = await supabase.from('openings').update(input).eq('id', id);
   if (error) throw new Error(`updateOpening failed: ${error.message}`);
 }

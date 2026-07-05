@@ -23,7 +23,23 @@ export async function createCandidate(input: CreateCandidateInput): Promise<Cand
   return data as Candidate;
 }
 
-export async function updateCandidate(id: string, input: CreateCandidateInput): Promise<void> {
+export interface UpdateCandidateInput {
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  location?: string | null;
+  current_employer?: string | null;
+  current_designation?: string | null;
+  years_experience_total?: number | null;
+  years_experience_relevant?: number | null;
+  current_salary?: number | null;
+  expected_salary?: number | null;
+  notice_period?: string | null;
+  source?: string | null;
+  tags?: string | null;
+}
+
+export async function updateCandidate(id: string, input: UpdateCandidateInput): Promise<void> {
   const { error } = await supabase.from('candidates').update(input).eq('id', id);
   if (error) throw new Error(`updateCandidate failed: ${error.message}`);
 }
