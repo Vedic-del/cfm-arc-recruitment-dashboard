@@ -6,6 +6,7 @@ export interface CreateOpeningInput {
   title: string;
   department?: string;
   level?: string;
+  description?: string;
   hiring_manager?: string;
   positions_count?: number;
   date_opened?: string;
@@ -39,6 +40,11 @@ export async function updateOpeningStatus(id: string, status: OpeningStatus): Pr
   if (status === 'filled') patch.filled_at = new Date().toISOString();
   const { error } = await supabase.from('openings').update(patch).eq('id', id);
   if (error) throw new Error(`updateOpeningStatus failed: ${error.message}`);
+}
+
+export async function updateOpening(id: string, input: CreateOpeningInput): Promise<void> {
+  const { error } = await supabase.from('openings').update(input).eq('id', id);
+  if (error) throw new Error(`updateOpening failed: ${error.message}`);
 }
 
 export async function averageTimeToFill(): Promise<number | null> {
