@@ -1,6 +1,7 @@
 'use client';
 
 import { useFormStatus } from 'react-dom';
+import { Spinner } from './Spinner';
 
 const PRIMARY = 'rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60';
 const SECONDARY = 'rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60';
@@ -19,7 +20,14 @@ export function SubmitButton({
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className={className ?? (variant === 'primary' ? PRIMARY : SECONDARY)}>
-      {pending ? pendingText : children}
+      {pending ? (
+        <span className="inline-flex items-center gap-2">
+          <Spinner />
+          {pendingText}
+        </span>
+      ) : (
+        children
+      )}
     </button>
   );
 }

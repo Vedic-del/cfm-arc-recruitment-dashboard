@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { STAGES, type Stage } from '@/lib/types';
 import { advanceStageAction, generateScorecardAction, scoreMatchAction } from './actions';
 import type { PipelineCard } from '@/lib/db/pipeline';
+import { Spinner } from '@/components/Spinner';
 
 const PATH: Stage[] = ['Sourced', 'Screening', 'Round 1', 'Round 2', 'HR/Offer Discussion', 'Offer', 'Joined'];
 
@@ -139,14 +140,24 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
                 ))}
               </select>
               {pendingStage[card.candidateOpeningId] && (
-                <span className="text-xs text-slate">Updating…</span>
+                <span className="inline-flex items-center gap-1.5 text-xs text-slate">
+                  <Spinner className="h-3 w-3" />
+                  Updating…
+                </span>
               )}
               <button
                 onClick={() => handleGenerateLink(card.candidateOpeningId, card.currentStage)}
                 disabled={pendingLink[card.candidateOpeningId]}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {pendingLink[card.candidateOpeningId] ? 'Generating…' : 'Generate Scorecard Link'}
+                {pendingLink[card.candidateOpeningId] ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Spinner className="h-3 w-3" />
+                    Generating…
+                  </span>
+                ) : (
+                  'Generate Scorecard Link'
+                )}
               </button>
             </div>
             <div className="mt-2 flex items-center gap-2">
@@ -163,7 +174,14 @@ export function PipelineBoard({ openingId, cards }: { openingId: string; cards: 
                   disabled={pendingMatch[card.candidateOpeningId]}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-forest-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {pendingMatch[card.candidateOpeningId] ? 'Scoring…' : 'Match against JD'}
+                  {pendingMatch[card.candidateOpeningId] ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Spinner className="h-3 w-3" />
+                      Scoring…
+                    </span>
+                  ) : (
+                    'Match against JD'
+                  )}
                 </button>
               )}
             </div>

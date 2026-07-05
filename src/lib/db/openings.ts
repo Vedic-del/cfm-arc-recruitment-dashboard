@@ -58,6 +58,11 @@ export async function updateOpening(id: string, input: UpdateOpeningInput): Prom
   if (error) throw new Error(`updateOpening failed: ${error.message}`);
 }
 
+export async function deleteOpening(id: string): Promise<void> {
+  const { error } = await supabase.from('openings').delete().eq('id', id);
+  if (error) throw new Error(`deleteOpening failed: ${error.message}`);
+}
+
 export async function averageTimeToFill(): Promise<number | null> {
   const { data, error } = await supabase
     .from('openings')

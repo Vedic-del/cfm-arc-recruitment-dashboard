@@ -3,8 +3,9 @@ import { getCandidate, getResumeUrl } from '@/lib/db/candidates';
 import { getCandidateOpenings, getPipelineHistory } from '@/lib/db/pipeline';
 import { getScorecardsForCandidateOpening } from '@/lib/db/scorecards';
 import { listOpenings } from '@/lib/db/openings';
-import { linkToOpeningAction } from './actions';
+import { linkToOpeningAction, deleteCandidateAction } from './actions';
 import { SubmitButton } from '@/components/SubmitButton';
+import { ConfirmDeleteForm } from '@/components/ConfirmDeleteForm';
 
 const FIELD_LABEL = 'text-xs font-semibold uppercase tracking-wide text-slate';
 const FIELD_VALUE = 'text-sm text-ink';
@@ -23,6 +24,8 @@ export default async function CandidateProfilePage({ params }: { params: Promise
   const candidateOpenings = await getCandidateOpenings(id);
   const openings = await listOpenings();
   const boundAction = linkToOpeningAction.bind(null, candidate.id);
+  const boundDelete = deleteCandidateAction.bind(null, candidate.id);
+  const linkedCount = candidateOpenings.length;
 
   const pipelineDetails = await Promise.all(
     candidateOpenings.map(async (co) => ({
@@ -55,12 +58,22 @@ export default async function CandidateProfilePage({ params }: { params: Promise
             {candidate.current_employer ? ` at ${candidate.current_employer}` : ''}
           </p>
         </div>
-        <Link
-          href={`/candidates/${candidate.id}/edit`}
-          className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
-        >
-          Edit
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href={`/candidates/${candidate.id}/edit`}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
+          >
+            Edit
+          </Link>
+          <ConfirmDeleteForm
+            action={boundDelete}
+            confirmMessage={
+              linkedCount > 0
+                ? `Delete ${candidate.name}? They're linked to ${linkedCount} opening${linkedCount === 1 ? '' : 's'} — those pipeline links will be removed too. This can't be undone.`
+                : `Delete ${candidate.name}? This can't be undone.`
+            }
+          />
+        </div>
       </div>
 
       <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

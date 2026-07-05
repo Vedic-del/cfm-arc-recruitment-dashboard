@@ -20,7 +20,7 @@ export default async function EditCandidatePage({ params }: { params: Promise<{ 
   return (
     <div className="mx-auto max-w-xl animate-fade-in-up">
       <h1 className="font-display text-2xl font-bold tracking-tight text-forest-950">Edit Candidate</h1>
-      <p className="mt-1 text-sm text-slate">Update what you've learned about {candidate.name} since sourcing.</p>
+      <p className="mt-1 text-sm text-slate">Update what you&apos;ve learned about {candidate.name} since sourcing.</p>
 
       <form action={boundAction} className="mt-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div>

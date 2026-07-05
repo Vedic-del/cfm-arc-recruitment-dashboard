@@ -3,27 +3,30 @@
 import { createCandidate } from '@/lib/db/candidates';
 import { linkCandidateToOpening } from '@/lib/db/pipeline';
 import { extractResumeText } from '@/lib/resumeParsing';
-import { summarizeResume } from '@/lib/resumeSummary';
+import { extractResumeFields, type ExtractedResumeFields } from '@/lib/resumeExtraction';
 import { redirect } from 'next/navigation';
+
+export async function parseResumeAction(
+  formData: FormData
+): Promise<{ fields: ExtractedResumeFields; summary: string } | null> {
+  const resumeFile = formData.get('resume') as File | null;
+  if (!resumeFile || resumeFile.size === 0) return null;
+
+  try {
+    const text = await extractResumeText(resumeFile);
+    if (!text || text.trim().length === 0) return null;
+    return await extractResumeFields(text);
+  } catch (error) {
+    console.error('parseResumeAction failed:', error);
+    return null;
+  }
+}
 
 export async function createCandidateAction(formData: FormData) {
   const name = String(formData.get('name') ?? '');
   if (!name.trim()) throw new Error('Name is required');
   const openingId = String(formData.get('opening_id') ?? '');
   if (!openingId) throw new Error('An opening must be selected');
-
-  let resumeSummary: string | undefined;
-  const resumeFile = formData.get('resume') as File | null;
-  if (resumeFile && resumeFile.size > 0) {
-    try {
-      const text = await extractResumeText(resumeFile);
-      if (text && text.trim().length > 0) {
-        resumeSummary = await summarizeResume(text);
-      }
-    } catch (error) {
-      console.error('Resume extraction/summarization failed:', error);
-    }
-  }
 
   const candidate = await createCandidate({
     name,
@@ -45,7 +48,7 @@ export async function createCandidateAction(formData: FormData) {
     notice_period: String(formData.get('notice_period') ?? '') || undefined,
     source: String(formData.get('source') ?? '') || undefined,
     tags: String(formData.get('tags') ?? '') || undefined,
-    resume_summary: resumeSummary,
+    resume_summary: String(formData.get('resume_summary') ?? '') || undefined,
   });
 
   await linkCandidateToOpening(candidate.id, openingId);

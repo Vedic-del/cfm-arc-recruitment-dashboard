@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { getOpening } from '@/lib/db/openings';
 import { getPipelineForOpening } from '@/lib/db/pipeline';
 import { PipelineBoard } from './PipelineBoard';
-import { markOpeningFilledAction } from './actions';
+import { markOpeningFilledAction, deleteOpeningAction } from './actions';
 import { SubmitButton } from '@/components/SubmitButton';
+import { ConfirmDeleteForm } from '@/components/ConfirmDeleteForm';
 
 const STATUS_STYLES: Record<string, string> = {
   open: 'bg-green-100 text-forest-900',
@@ -24,6 +25,8 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
   }
   const cards = await getPipelineForOpening(id);
   const boundMarkFilled = markOpeningFilledAction.bind(null, opening.id);
+  const boundDelete = deleteOpeningAction.bind(null, opening.id);
+  const candidateCount = cards.length;
 
   return (
     <div className="animate-fade-in-up">
@@ -56,6 +59,14 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
           <form action={boundMarkFilled}>
             <SubmitButton variant="secondary" pendingText="Saving…">Mark Filled</SubmitButton>
           </form>
+          <ConfirmDeleteForm
+            action={boundDelete}
+            confirmMessage={
+              candidateCount > 0
+                ? `Delete "${opening.title}"? Its ${candidateCount} linked candidate${candidateCount === 1 ? '' : 's'} will stay in the candidate repository — only this opening and its pipeline history will be removed. This can't be undone.`
+                : `Delete "${opening.title}"? This can't be undone.`
+            }
+          />
         </div>
       </div>
 

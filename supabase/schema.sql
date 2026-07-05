@@ -99,3 +99,38 @@ alter table openings add column description text;
 alter table candidates add column resume_summary text;
 alter table candidate_openings add column match_score int;
 alter table candidate_openings add column match_rationale text;
+
+-- Deleting an opening should remove its pipeline links (candidate_openings
+-- rows) and anything hanging off them (pipeline_events, scorecards), but
+-- must NOT delete the candidates themselves — they may still be relevant
+-- to other openings or just kept on file. Deleting a candidate should
+-- likewise remove their pipeline links across all openings, but must not
+-- touch other candidates or any openings. None of the FKs below were
+-- declared with an explicit ON DELETE behavior originally (default RESTRICT),
+-- so this migration swaps them to CASCADE. Looks up each constraint by
+-- table+column rather than assuming a name, since these were never named
+-- explicitly above.
+create or replace function _cascade_fk(p_table text, p_column text, p_ref_table text, p_new_name text) returns void as $$
+declare
+  conname text;
+begin
+  select tc.constraint_name into conname
+  from information_schema.table_constraints tc
+  join information_schema.key_column_usage kcu
+    on tc.constraint_name = kcu.constraint_name and tc.table_schema = kcu.table_schema
+  where tc.table_name = p_table
+    and kcu.column_name = p_column
+    and tc.constraint_type = 'FOREIGN KEY';
+  if conname is not null then
+    execute format('alter table %I drop constraint %I', p_table, conname);
+  end if;
+  execute format('alter table %I add constraint %I foreign key (%I) references %I(id) on delete cascade', p_table, p_new_name, p_column, p_ref_table);
+end;
+$$ language plpgsql;
+
+select _cascade_fk('candidate_openings', 'candidate_id', 'candidates', 'candidate_openings_candidate_id_fkey');
+select _cascade_fk('candidate_openings', 'opening_id', 'openings', 'candidate_openings_opening_id_fkey');
+select _cascade_fk('pipeline_events', 'candidate_opening_id', 'candidate_openings', 'pipeline_events_candidate_opening_id_fkey');
+select _cascade_fk('scorecards', 'candidate_opening_id', 'candidate_openings', 'scorecards_candidate_opening_id_fkey');
+
+drop function _cascade_fk(text, text, text, text);

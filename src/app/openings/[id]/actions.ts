@@ -2,8 +2,9 @@
 
 import { advanceStage, scoreMatch } from '@/lib/db/pipeline';
 import { generateScorecard } from '@/lib/db/scorecards';
-import { updateOpeningStatus } from '@/lib/db/openings';
+import { updateOpeningStatus, deleteOpening } from '@/lib/db/openings';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import type { Stage } from '@/lib/types';
 
 export async function advanceStageAction(candidateOpeningId: string, openingId: string, newStage: Stage) {
@@ -22,4 +23,9 @@ export async function markOpeningFilledAction(openingId: string) {
 
 export async function scoreMatchAction(candidateOpeningId: string): Promise<{ score: number; rationale: string }> {
   return scoreMatch(candidateOpeningId);
+}
+
+export async function deleteOpeningAction(openingId: string) {
+  await deleteOpening(openingId);
+  redirect('/openings');
 }
