@@ -11,6 +11,7 @@ import {
 } from './actions';
 import type { PipelineCard } from '@/lib/db/pipeline';
 import { Spinner } from '@/components/Spinner';
+import { STAGE_META } from '@/lib/stages';
 
 const PATH: Stage[] = ['Sourced', 'Screening', 'Round 1', 'Round 2', 'HR/Offer Discussion', 'Offer', 'Joined'];
 
@@ -133,18 +134,6 @@ function NextStepEditor({
 }
 
 const COLUMNS: Stage[] = [...STAGES];
-
-const COLUMN_ACCENT: Record<string, string> = {
-  Sourced: 'text-slate',
-  Screening: 'text-forest-700',
-  'Round 1': 'text-forest-700',
-  'Round 2': 'text-forest-700',
-  'HR/Offer Discussion': 'text-forest-700',
-  Offer: 'text-forest-900',
-  Joined: 'text-forest-900',
-  Rejected: 'text-danger',
-  Dropped: 'text-slate',
-};
 
 export function PipelineBoard({
   openingId,
@@ -369,10 +358,11 @@ export function PipelineBoard({
             return (
               <div key={stage} className="flex w-72 shrink-0 flex-col rounded-xl bg-slate-100/70 p-2">
                 <div className="flex items-center justify-between px-1 py-1.5">
-                  <span className={`text-xs font-bold uppercase tracking-wide ${COLUMN_ACCENT[stage] ?? 'text-slate'}`}>
+                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-ink">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: STAGE_META[stage].dot }} />
                     {stage}
                   </span>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate">{items.length}</span>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate shadow-sm">{items.length}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {items.length === 0 ? (

@@ -9,9 +9,7 @@ import { STAGES, type Stage } from '@/lib/types';
 import type { Candidate } from '@/lib/types';
 import type { CandidateStageInfo } from '@/lib/db/pipeline';
 import type { CandidateFilters } from '@/lib/db/candidates';
-
-const ACTIVE_STAGE_BADGE = 'bg-green-100 text-forest-900';
-const CLOSED_STAGE_BADGE = 'bg-slate-100 text-slate';
+import { STAGE_META } from '@/lib/stages';
 
 function csvEscape(value: string | number | null): string {
   if (value === null || value === undefined) return '';
@@ -235,18 +233,15 @@ export function CandidatesTable({
                       <span className="text-slate">—</span>
                     ) : (
                       <div className="flex flex-wrap gap-1">
-                        {stages.map((s, i) => {
-                          const closed = ['Joined', 'Rejected', 'Dropped'].includes(s.stage);
-                          return (
-                            <span
-                              key={i}
-                              title={s.openingTitle}
-                              className={`inline-block max-w-[220px] truncate rounded-full px-2 py-0.5 text-xs font-medium ${closed ? CLOSED_STAGE_BADGE : ACTIVE_STAGE_BADGE}`}
-                            >
-                              {s.openingTitle}: {s.stage}
-                            </span>
-                          );
-                        })}
+                        {stages.map((s, i) => (
+                          <span
+                            key={i}
+                            title={s.openingTitle}
+                            className={`inline-block max-w-[220px] truncate rounded-full px-2 py-0.5 text-xs font-medium ${STAGE_META[s.stage].badge}`}
+                          >
+                            {s.openingTitle}: {s.stage}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </td>

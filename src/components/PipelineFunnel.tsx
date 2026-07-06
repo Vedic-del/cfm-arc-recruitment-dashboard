@@ -1,4 +1,5 @@
 import { STAGES, type Stage } from '@/lib/types';
+import { STAGE_META } from '@/lib/stages';
 
 const ACTIVE_PATH: Stage[] = [
   'Sourced',
@@ -10,22 +11,11 @@ const ACTIVE_PATH: Stage[] = [
   'Joined',
 ];
 
-// Progressive deepening of the brand green as candidates move down the funnel.
-const BAR_COLORS = [
-  '#4ade80',
-  '#22c55e',
-  '#16a34a',
-  '#15803d',
-  '#146c46',
-  '#0f4c3a',
-  '#08211a',
-];
-
 export function PipelineFunnel({ counts }: { counts: Record<string, number> }) {
-  const activeRows = ACTIVE_PATH.map((stage, i) => ({
+  const activeRows = ACTIVE_PATH.map((stage) => ({
     stage,
     count: counts[stage] ?? 0,
-    color: BAR_COLORS[i] ?? '#0f4c3a',
+    color: STAGE_META[stage].bar,
   }));
   const max = Math.max(1, ...activeRows.map((r) => r.count));
   const totalActive = activeRows.reduce((s, r) => s + r.count, 0);

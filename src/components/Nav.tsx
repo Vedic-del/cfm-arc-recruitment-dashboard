@@ -19,10 +19,10 @@ export function Nav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-10 border-b border-slate-200 bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/70">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 overflow-x-auto px-4 py-4 sm:gap-8 sm:px-6">
+    <nav className="sticky top-0 z-10 border-b border-slate-200 bg-paper/85 shadow-[0_1px_0_rgba(15,76,58,0.04)] backdrop-blur supports-[backdrop-filter]:bg-paper/70">
+      <div className="mx-auto flex max-w-6xl items-center gap-4 overflow-x-auto px-4 py-3.5 sm:gap-8 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2 whitespace-nowrap font-display text-lg font-bold tracking-tight text-forest-900">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-forest-900 text-sm font-bold text-green-100">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-forest-700 to-forest-950 text-sm font-bold text-green-100 shadow-sm">
             C
           </span>
           CFM ARC

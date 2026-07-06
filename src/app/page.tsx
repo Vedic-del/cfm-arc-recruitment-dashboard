@@ -30,10 +30,12 @@ function StatCard({
 }) {
   const valueColor =
     tone === 'danger' ? 'text-danger' : tone === 'success' ? 'text-forest-700' : 'text-forest-950';
+  const accent = tone === 'danger' ? 'bg-danger' : tone === 'success' ? 'bg-green-500' : 'bg-slate-200';
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+      <span className={`absolute inset-x-0 top-0 h-0.5 ${accent}`} />
       <p className="text-xs font-semibold uppercase tracking-wide text-slate">{label}</p>
-      <p className={`mt-1 font-display text-3xl font-bold ${valueColor}`}>{value}</p>
+      <p className={`mt-1 font-display text-3xl font-bold tabular-nums ${valueColor}`}>{value}</p>
       {hint && <p className="mt-0.5 text-xs text-slate">{hint}</p>}
     </div>
   );
@@ -59,12 +61,25 @@ export default async function DashboardPage() {
 
   const sortedBottlenecks = Object.entries(avgTimeInStage).sort((a, b) => b[1] - a[1]);
 
+  const briefing = [
+    openRoles > 0 ? `${openRoles} role${openRoles === 1 ? '' : 's'} actively hiring` : 'No roles open right now',
+    `${activeInPipeline} candidate${activeInPipeline === 1 ? '' : 's'} in play`,
+    overdueCount > 0 ? `${overdueCount} follow-up${overdueCount === 1 ? '' : 's'} overdue` : 'nothing overdue',
+  ].join('  ·  ');
+
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-forest-950">Recruitment Dashboard</h1>
-        <p className="mt-1 text-sm text-slate">Where every opening stands, right now.</p>
-      </div>
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-forest-950 via-forest-900 to-forest-700 p-6 shadow-sm sm:p-8">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-green-400/10 blur-2xl"
+        />
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-green-400">CFM ARC · Talent</p>
+        <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-white sm:text-[1.75rem]">
+          Recruitment command centre
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm text-green-100/85">{briefing}.</p>
+      </section>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
