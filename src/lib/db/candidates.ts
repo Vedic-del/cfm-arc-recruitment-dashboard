@@ -74,6 +74,51 @@ export async function addCandidateNote(candidateId: string, note: string): Promi
   if (error) throw new Error(`addCandidateNote failed: ${error.message}`);
 }
 
+export async function getCandidateIdentifiers(): Promise<
+  { name: string; email: string | null; phone: string | null }[]
+> {
+  const { data, error } = await supabase.from('candidates').select('name, email, phone');
+  if (error) throw new Error(`getCandidateIdentifiers failed: ${error.message}`);
+  return data as { name: string; email: string | null; phone: string | null }[];
+}
+
+export interface BulkImportResult {
+  created: number;
+  linkedToOpening: boolean;
+}
+
+export async function bulkCreateCandidates(
+  inputs: CreateCandidateInput[],
+  openingId?: string
+): Promise<BulkImportResult> {
+  if (inputs.length === 0) return { created: 0, linkedToOpening: false };
+
+  const { data, error } = await supabase.from('candidates').insert(inputs).select('id');
+  if (error) throw new Error(`bulkCreateCandidates failed: ${error.message}`);
+  const ids = (data as { id: string }[]).map((r) => r.id);
+
+  if (openingId) {
+    const links = ids.map((candidate_id) => ({
+      candidate_id,
+      opening_id: openingId,
+      current_stage: 'Sourced',
+    }));
+    const { data: linkData, error: linkErr } = await supabase
+      .from('candidate_openings')
+      .insert(links)
+      .select('id');
+    if (linkErr) throw new Error(`bulkCreateCandidates link failed: ${linkErr.message}`);
+    const events = (linkData as { id: string }[]).map((l) => ({
+      candidate_opening_id: l.id,
+      stage: 'Sourced',
+    }));
+    const { error: evErr } = await supabase.from('pipeline_events').insert(events);
+    if (evErr) throw new Error(`bulkCreateCandidates events failed: ${evErr.message}`);
+  }
+
+  return { created: ids.length, linkedToOpening: !!openingId };
+}
+
 export interface DuplicateMatch {
   id: string;
   name: string;

@@ -28,12 +28,20 @@ export default async function CandidatesPage({
           <h1 className="font-display text-2xl font-bold tracking-tight text-forest-950">Candidate Repository</h1>
           <p className="mt-1 text-sm text-slate">Every candidate ever sourced, searchable for future roles.</p>
         </div>
-        <Link
-          href="/candidates/new"
-          className="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
-        >
-          + Add Candidate
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/candidates/import"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
+          >
+            ⬆ Import
+          </Link>
+          <Link
+            href="/candidates/new"
+            className="rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
+          >
+            + Add Candidate
+          </Link>
+        </div>
       </div>
 
       <form className="mb-5 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
