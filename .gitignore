@@ -44,3 +44,6 @@ next-env.d.ts
 # claude code settings
 .claude/settings.local.json
 .superpowers/
+
+# One-time legacy import undo manifest (generated, machine-local)
+scripts/legacy-import-ids.json
