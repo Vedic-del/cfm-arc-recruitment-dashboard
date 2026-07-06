@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { bulkDeleteCandidatesAction } from './actions';
+import { bulkDeleteCandidatesAction, exportCandidatesAction } from './actions';
 import { Spinner } from '@/components/Spinner';
 import type { Candidate } from '@/lib/types';
 import type { CandidateStageInfo } from '@/lib/db/pipeline';
+import type { CandidateFilters } from '@/lib/db/candidates';
 
 const ACTIVE_STAGE_BADGE = 'bg-green-100 text-forest-900';
 const CLOSED_STAGE_BADGE = 'bg-slate-100 text-slate';
@@ -18,7 +19,7 @@ function csvEscape(value: string | number | null): string {
   return str;
 }
 
-function exportCsv(candidates: Candidate[], stagesByCandidate: Record<string, CandidateStageInfo[]>) {
+function buildCsv(candidates: Candidate[], stagesByCandidate: Record<string, CandidateStageInfo[]>): string {
   const headers = [
     'Name', 'Phone', 'Email', 'Location', 'Current Employer', 'Current Designation',
     'Experience (total)', 'Experience (relevant)', 'Current Salary', 'Expected Salary',
@@ -34,7 +35,10 @@ function exportCsv(candidates: Candidate[], stagesByCandidate: Record<string, Ca
       c.notice_period, c.source, c.tags, pipelines,
     ].map(csvEscape).join(',');
   });
-  const csv = [headers.join(','), ...rows].join('\n');
+  return [headers.join(','), ...rows].join('\n');
+}
+
+function downloadCsv(csv: string) {
   const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -47,13 +51,30 @@ function exportCsv(candidates: Candidate[], stagesByCandidate: Record<string, Ca
 export function CandidatesTable({
   candidates,
   stagesByCandidate,
+  total,
+  rangeLabel,
+  exportFilters,
 }: {
   candidates: Candidate[];
   stagesByCandidate: Record<string, CandidateStageInfo[]>;
+  total: number;
+  rangeLabel: string;
+  exportFilters: CandidateFilters;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const { candidates: all, stages } = await exportCandidatesAction(exportFilters);
+      downloadCsv(buildCsv(all, stages));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const allSelected = candidates.length > 0 && selected.size === candidates.length;
   const someSelected = selected.size > 0 && !allSelected;
@@ -103,13 +124,15 @@ export function CandidatesTable({
             </button>
           </div>
         ) : (
-          <span className="text-sm text-slate">{candidates.length} candidate{candidates.length === 1 ? '' : 's'}</span>
+          <span className="text-sm text-slate">{rangeLabel}</span>
         )}
         <button
-          onClick={() => exportCsv(candidates, stagesByCandidate)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
+          onClick={handleExport}
+          disabled={exporting}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          ⬇ Export CSV
+          {exporting && <Spinner className="h-3.5 w-3.5" />}
+          {exporting ? 'Preparing…' : `⬇ Export CSV (${total})`}
         </button>
       </div>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

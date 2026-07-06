@@ -207,6 +207,62 @@ export async function getStagesByCandidate(): Promise<Record<string, CandidateSt
   return map;
 }
 
+export async function getStagesForCandidates(
+  ids: string[]
+): Promise<Record<string, CandidateStageInfo[]>> {
+  if (ids.length === 0) return {};
+  interface Row {
+    candidate_id: string;
+    current_stage: Stage;
+    openings: { title: string };
+  }
+  const map: Record<string, CandidateStageInfo[]> = {};
+  // Chunk the id list so a large export (hundreds of ids) never exceeds
+  // PostgREST's request-URL length limit.
+  const CHUNK = 150;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from('candidate_openings')
+      .select('candidate_id, current_stage, openings(title)')
+      .in('candidate_id', slice);
+    if (error) throw new Error(`getStagesForCandidates failed: ${error.message}`);
+    for (const row of data as unknown as Row[]) {
+      (map[row.candidate_id] ??= []).push({ openingTitle: row.openings.title, stage: row.current_stage });
+    }
+  }
+  return map;
+}
+
+export interface SourceStat {
+  source: string;
+  total: number;
+  advanced: number;
+  rejected: number;
+}
+
+export async function getSourcePerformance(limit = 8): Promise<SourceStat[]> {
+  const { data, error } = await supabase
+    .from('candidates')
+    .select('source, candidate_openings(current_stage)');
+  if (error) return [];
+  const ADVANCED = new Set(['Round 1', 'Round 2', 'HR/Offer Discussion', 'Offer', 'Joined']);
+  const map = new Map<string, { total: number; advanced: number; rejected: number }>();
+  for (const row of data as unknown as { source: string | null; candidate_openings: { current_stage: string }[] }[]) {
+    const src = (row.source ?? '').trim() || 'Unknown';
+    const stat = map.get(src) ?? { total: 0, advanced: 0, rejected: 0 };
+    stat.total += 1;
+    const stages = row.candidate_openings ?? [];
+    if (stages.some((s) => ADVANCED.has(s.current_stage))) stat.advanced += 1;
+    else if (stages.some((s) => s.current_stage === 'Rejected')) stat.rejected += 1;
+    map.set(src, stat);
+  }
+  return Array.from(map.entries())
+    .map(([source, s]) => ({ source, ...s }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit);
+}
+
 export async function getStageCounts(): Promise<Record<string, number>> {
   const { data, error } = await supabase.from('candidate_openings').select('current_stage');
   if (error) throw new Error(`getStageCounts failed: ${error.message}`);

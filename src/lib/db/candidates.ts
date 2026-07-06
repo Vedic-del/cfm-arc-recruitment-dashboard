@@ -168,25 +168,95 @@ export interface CandidateFilters {
   minExperience?: number;
   maxSalary?: number;
   source?: string;
+  openingId?: string;
+  stage?: string;
+  page?: number; // 0-based
+  pageSize?: number;
 }
 
-export async function listCandidates(filters: CandidateFilters = {}): Promise<Candidate[]> {
-  let q = supabase.from('candidates').select('*').order('created_at', { ascending: false });
-  if (filters.query) {
-    q = q.or(
-      `name.ilike.%${filters.query}%,tags.ilike.%${filters.query}%,source.ilike.%${filters.query}%`
-    );
-  }
-  if (filters.minExperience !== undefined) {
-    q = q.gte('years_experience_total', filters.minExperience);
-  }
-  if (filters.maxSalary !== undefined) {
-    q = q.lte('expected_salary', filters.maxSalary);
-  }
-  if (filters.source) {
-    q = q.eq('source', filters.source);
-  }
-  const { data, error } = await q;
+export interface CandidateListResult {
+  candidates: Candidate[];
+  total: number;
+}
+
+// Escape PostgREST reserved characters in a free-text ilike filter so a comma
+// or paren in the query can't break out of the .or() grammar.
+function escapeLike(value: string): string {
+  return value.replace(/[,()]/g, ' ');
+}
+
+function orClause(query: string): string {
+  const like = `%${escapeLike(query)}%`;
+  return [
+    `name.ilike.${like}`,
+    `email.ilike.${like}`,
+    `phone.ilike.${like}`,
+    `current_employer.ilike.${like}`,
+    `current_designation.ilike.${like}`,
+    `location.ilike.${like}`,
+    `tags.ilike.${like}`,
+    `source.ilike.${like}`,
+  ].join(',');
+}
+
+function dedupeById(rows: Candidate[]): Candidate[] {
+  const seen = new Set<string>();
+  return rows.filter((c) => {
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
+    return true;
+  });
+}
+
+export async function listCandidates(filters: CandidateFilters = {}): Promise<CandidateListResult> {
+  const pageSize = filters.pageSize ?? 50;
+  const page = filters.page ?? 0;
+  const useJoin = !!(filters.openingId || filters.stage);
+  const select = useJoin ? '*, candidate_openings!inner(opening_id, current_stage)' : '*';
+
+  let q = supabase
+    .from('candidates')
+    .select(select, { count: 'exact' })
+    .order('created_at', { ascending: false });
+  if (filters.query) q = q.or(orClause(filters.query));
+  if (filters.minExperience !== undefined) q = q.gte('years_experience_total', filters.minExperience);
+  if (filters.maxSalary !== undefined) q = q.lte('expected_salary', filters.maxSalary);
+  if (filters.source) q = q.eq('source', filters.source);
+  if (filters.openingId) q = q.eq('candidate_openings.opening_id', filters.openingId);
+  if (filters.stage) q = q.eq('candidate_openings.current_stage', filters.stage);
+  q = q.range(page * pageSize, page * pageSize + pageSize - 1);
+
+  const { data, error, count } = await q;
   if (error) throw new Error(`listCandidates failed: ${error.message}`);
-  return data as Candidate[];
+  // A stage-only join can return the same candidate once per matching link;
+  // dedupe the page by id so rows never repeat.
+  const candidates = dedupeById(data as unknown as Candidate[]);
+  return { candidates, total: count ?? candidates.length };
+}
+
+// Full filtered set (no pagination) for CSV export.
+export async function listAllCandidatesMatching(filters: CandidateFilters = {}): Promise<Candidate[]> {
+  const useJoin = !!(filters.openingId || filters.stage);
+  const select = useJoin ? '*, candidate_openings!inner(opening_id, current_stage)' : '*';
+  let q = supabase.from('candidates').select(select).order('created_at', { ascending: false });
+  if (filters.query) q = q.or(orClause(filters.query));
+  if (filters.minExperience !== undefined) q = q.gte('years_experience_total', filters.minExperience);
+  if (filters.maxSalary !== undefined) q = q.lte('expected_salary', filters.maxSalary);
+  if (filters.source) q = q.eq('source', filters.source);
+  if (filters.openingId) q = q.eq('candidate_openings.opening_id', filters.openingId);
+  if (filters.stage) q = q.eq('candidate_openings.current_stage', filters.stage);
+  const { data, error } = await q;
+  if (error) throw new Error(`listAllCandidatesMatching failed: ${error.message}`);
+  return dedupeById(data as unknown as Candidate[]);
+}
+
+export async function getDistinctSources(): Promise<string[]> {
+  const { data, error } = await supabase.from('candidates').select('source').not('source', 'is', null);
+  if (error) return [];
+  const set = new Set<string>();
+  for (const row of data as { source: string | null }[]) {
+    const s = (row.source ?? '').trim();
+    if (s) set.add(s);
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
 }

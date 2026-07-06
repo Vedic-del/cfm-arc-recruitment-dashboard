@@ -5,6 +5,7 @@ import {
   getStageCounts,
   getAverageTimeInStage,
   getUpcomingActions,
+  getSourcePerformance,
 } from '@/lib/db/pipeline';
 import { PipelineFunnel } from '@/components/PipelineFunnel';
 
@@ -39,13 +40,14 @@ function StatCard({
 }
 
 export default async function DashboardPage() {
-  const [openings, stuck, stageCounts, avgTimeInStage, avgFill, upcoming] = await Promise.all([
+  const [openings, stuck, stageCounts, avgTimeInStage, avgFill, upcoming, sources] = await Promise.all([
     listOpenings(),
     getStuckCandidates(),
     getStageCounts(),
     getAverageTimeInStage(),
     averageTimeToFill(),
     getUpcomingActions(),
+    getSourcePerformance(),
   ]);
 
   const openRoles = openings.filter((o) => o.status === 'open').length;
@@ -123,6 +125,58 @@ export default async function DashboardPage() {
               );
             })}
           </ul>
+        </section>
+      )}
+
+      {sources.length > 0 && (
+        <section className="animate-fade-in-up rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wide text-slate">
+            Source performance — who delivers
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate">
+                  <th className="py-2 pr-3">Source</th>
+                  <th className="py-2 pr-3 text-right">Sourced</th>
+                  <th className="py-2 pr-3 text-right">Advanced</th>
+                  <th className="py-2 pr-3 text-right">Rejected</th>
+                  <th className="py-2 pl-3">Hit rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sources.map((s) => {
+                  const rate = s.total > 0 ? Math.round((s.advanced / s.total) * 100) : 0;
+                  return (
+                    <tr key={s.source} className="border-b border-slate-100 last:border-0">
+                      <td className="py-2 pr-3">
+                        <Link
+                          href={`/candidates?source=${encodeURIComponent(s.source)}`}
+                          className="font-medium text-forest-700 hover:text-forest-900 hover:underline"
+                        >
+                          {s.source}
+                        </Link>
+                      </td>
+                      <td className="py-2 pr-3 text-right text-ink">{s.total}</td>
+                      <td className="py-2 pr-3 text-right font-semibold text-forest-700">{s.advanced}</td>
+                      <td className="py-2 pr-3 text-right text-slate">{s.rejected}</td>
+                      <td className="py-2 pl-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
+                            <div className="h-full rounded-full bg-green-500" style={{ width: `${rate}%` }} />
+                          </div>
+                          <span className="text-xs text-slate">{rate}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-slate">
+            “Advanced” = reached Round 1 or beyond. Click a source to see those candidates.
+          </p>
         </section>
       )}
 

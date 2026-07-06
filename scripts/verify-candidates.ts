@@ -19,8 +19,8 @@ async function main() {
   const fetched = await getCandidate(candidate.id);
   console.log('Fetched name matches:', fetched?.name === 'Verification Test Candidate');
 
-  const filtered = await listCandidates({ minExperience: 3, query: 'Verification' });
-  console.log('Appears in filtered list:', filtered.some((c) => c.id === candidate.id));
+  const { candidates: filtered, total } = await listCandidates({ minExperience: 3, query: 'Verification' });
+  console.log('Appears in filtered list:', filtered.some((c) => c.id === candidate.id), '| total:', total);
 }
 
 main()

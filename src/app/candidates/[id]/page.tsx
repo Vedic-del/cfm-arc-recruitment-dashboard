@@ -91,7 +91,17 @@ export default async function CandidateProfilePage({ params }: { params: Promise
           {fields.map(([label, value]) => (
             <div key={label}>
               <dt className={FIELD_LABEL}>{label}</dt>
-              <dd className={FIELD_VALUE}>{value ?? '—'}</dd>
+              <dd className={FIELD_VALUE}>
+                {value === null || value === '' ? (
+                  '—'
+                ) : label === 'Phone' ? (
+                  <a href={`tel:${value}`} className="font-medium text-forest-700 hover:underline">{value}</a>
+                ) : label === 'Email' ? (
+                  <a href={`mailto:${value}`} className="font-medium text-forest-700 hover:underline">{value}</a>
+                ) : (
+                  value
+                )}
+              </dd>
             </div>
           ))}
         </dl>
