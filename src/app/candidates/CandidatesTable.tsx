@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { bulkDeleteCandidatesAction, exportCandidatesAction } from './actions';
+import { bulkDeleteCandidatesAction, exportCandidatesAction, bulkMoveStageAction } from './actions';
 import { Spinner } from '@/components/Spinner';
+import { STAGES, type Stage } from '@/lib/types';
 import type { Candidate } from '@/lib/types';
 import type { CandidateStageInfo } from '@/lib/db/pipeline';
 import type { CandidateFilters } from '@/lib/db/candidates';
@@ -65,6 +66,9 @@ export function CandidatesTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [moveStage, setMoveStage] = useState<Stage>('Screening');
+  const filteredOpeningId = exportFilters.openingId;
 
   async function handleExport() {
     setExporting(true);
@@ -73,6 +77,22 @@ export function CandidatesTable({
       downloadCsv(buildCsv(all, stages));
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleBulkMove() {
+    if (!filteredOpeningId) return;
+    let reason: string | undefined;
+    if (moveStage === 'Rejected' || moveStage === 'Dropped') {
+      reason = prompt(`Reason for marking ${selected.size} candidate(s) ${moveStage.toLowerCase()}? (optional)`) ?? undefined;
+    }
+    setMoving(true);
+    try {
+      await bulkMoveStageAction(Array.from(selected), filteredOpeningId, moveStage, reason);
+      setSelected(new Set());
+      router.refresh();
+    } finally {
+      setMoving(false);
     }
   }
 
@@ -112,16 +132,41 @@ export function CandidatesTable({
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         {selected.size > 0 ? (
-          <div className="flex flex-1 animate-fade-in-up items-center justify-between rounded-lg border border-danger/30 bg-danger-bg px-4 py-2.5">
-            <span className="text-sm font-medium text-danger">{selected.size} selected</span>
-            <button
-              onClick={handleBulkDelete}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-lg border border-danger/30 bg-white px-3 py-1.5 text-sm font-semibold text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {deleting && <Spinner className="h-3.5 w-3.5" />}
-              {deleting ? 'Deleting…' : 'Delete selected'}
-            </button>
+          <div className="flex flex-1 animate-fade-in-up flex-wrap items-center justify-between gap-2 rounded-lg border border-forest-700/30 bg-green-100/60 px-4 py-2.5">
+            <span className="text-sm font-medium text-forest-900">{selected.size} selected</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {filteredOpeningId && (
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={moveStage}
+                    onChange={(e) => setMoveStage(e.target.value as Stage)}
+                    disabled={moving}
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-ink focus:border-forest-700 focus:outline-none focus:ring-2 focus:ring-green-400/40 disabled:opacity-60"
+                    aria-label="Move selected to stage"
+                  >
+                    {STAGES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleBulkMove}
+                    disabled={moving}
+                    className="inline-flex items-center gap-2 rounded-lg bg-forest-900 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {moving && <Spinner className="h-3.5 w-3.5" />}
+                    {moving ? 'Moving…' : 'Move'}
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={handleBulkDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-lg border border-danger/30 bg-white px-3 py-1.5 text-sm font-semibold text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleting && <Spinner className="h-3.5 w-3.5" />}
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
           </div>
         ) : (
           <span className="text-sm text-slate">{rangeLabel}</span>

@@ -45,6 +45,34 @@ export async function advanceStage(
   }
 }
 
+export async function bulkAdvanceStageForOpening(
+  candidateIds: string[],
+  openingId: string,
+  stage: Stage,
+  reason?: string
+): Promise<number> {
+  if (candidateIds.length === 0) return 0;
+  const { data, error } = await supabase
+    .from('candidate_openings')
+    .select('id')
+    .eq('opening_id', openingId)
+    .in('candidate_id', candidateIds);
+  if (error) throw new Error(`bulkAdvanceStageForOpening fetch failed: ${error.message}`);
+  const coIds = (data as { id: string }[]).map((r) => r.id);
+  if (coIds.length === 0) return 0;
+
+  const patch: Record<string, unknown> = { current_stage: stage };
+  if ((stage === 'Rejected' || stage === 'Dropped') && reason) patch.outcome_reason = reason;
+  const { error: upErr } = await supabase.from('candidate_openings').update(patch).in('id', coIds);
+  if (upErr) throw new Error(`bulkAdvanceStageForOpening update failed: ${upErr.message}`);
+
+  const { error: evErr } = await supabase
+    .from('pipeline_events')
+    .insert(coIds.map((id) => ({ candidate_opening_id: id, stage })));
+  if (evErr) throw new Error(`bulkAdvanceStageForOpening events failed: ${evErr.message}`);
+  return coIds.length;
+}
+
 export async function updateNextStep(
   candidateOpeningId: string,
   nextStep: string | null,
