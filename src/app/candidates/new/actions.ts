@@ -1,7 +1,7 @@
 'use server';
 
 import { createCandidate } from '@/lib/db/candidates';
-import { linkCandidateToOpening } from '@/lib/db/pipeline';
+import { linkCandidateToOpening, scoreMatch } from '@/lib/db/pipeline';
 import { extractResumeText } from '@/lib/resumeParsing';
 import { extractResumeFields, type ExtractedResumeFields } from '@/lib/resumeExtraction';
 import { revalidatePath } from 'next/cache';
@@ -67,7 +67,15 @@ export async function createCandidateAction(formData: FormData) {
     resume_summary: String(formData.get('resume_summary') ?? '') || undefined,
   });
 
-  await linkCandidateToOpening(candidate.id, openingId);
+  const link = await linkCandidateToOpening(candidate.id, openingId);
+  // Auto-score the resume against the role's JD when both exist — scoreMatch
+  // throws (and we ignore it) if the summary or JD is missing, so this is a
+  // no-op for candidates without a resume or roles without a description.
+  try {
+    await scoreMatch(link.id);
+  } catch {
+    /* nothing to match yet */
+  }
   revalidatePath('/candidates');
   revalidatePath(`/openings/${openingId}`);
   revalidatePath('/');

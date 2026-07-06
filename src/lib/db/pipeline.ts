@@ -218,23 +218,6 @@ export interface CandidateStageInfo {
   stage: Stage;
 }
 
-export async function getStagesByCandidate(): Promise<Record<string, CandidateStageInfo[]>> {
-  const { data, error } = await supabase
-    .from('candidate_openings')
-    .select('candidate_id, current_stage, openings(title)');
-  if (error) throw new Error(`getStagesByCandidate failed: ${error.message}`);
-  interface Row {
-    candidate_id: string;
-    current_stage: Stage;
-    openings: { title: string };
-  }
-  const map: Record<string, CandidateStageInfo[]> = {};
-  for (const row of data as unknown as Row[]) {
-    (map[row.candidate_id] ??= []).push({ openingTitle: row.openings.title, stage: row.current_stage });
-  }
-  return map;
-}
-
 export async function getStagesForCandidates(
   ids: string[]
 ): Promise<Record<string, CandidateStageInfo[]>> {

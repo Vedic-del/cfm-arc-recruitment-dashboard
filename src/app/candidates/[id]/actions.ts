@@ -1,6 +1,6 @@
 'use server';
 
-import { linkCandidateToOpening } from '@/lib/db/pipeline';
+import { linkCandidateToOpening, scoreMatch } from '@/lib/db/pipeline';
 import { deleteCandidate, addCandidateNote } from '@/lib/db/candidates';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -14,7 +14,12 @@ export async function addNoteAction(candidateId: string, note: string): Promise<
 export async function linkToOpeningAction(candidateId: string, formData: FormData) {
   const openingId = String(formData.get('opening_id') ?? '');
   if (!openingId) throw new Error('An opening must be selected');
-  await linkCandidateToOpening(candidateId, openingId);
+  const link = await linkCandidateToOpening(candidateId, openingId);
+  try {
+    await scoreMatch(link.id);
+  } catch {
+    /* no resume summary or JD to match yet */
+  }
   revalidatePath(`/candidates/${candidateId}`);
   revalidatePath(`/openings/${openingId}`);
   revalidatePath('/');
