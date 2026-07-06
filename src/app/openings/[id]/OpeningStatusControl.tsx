@@ -28,8 +28,19 @@ export function OpeningStatusControl({ openingId, status }: { openingId: string;
     }
   }
 
+  const closedOut = status === 'closed' || status === 'filled';
+
   return (
     <div className="flex items-center gap-2">
+      {closedOut && (
+        <button
+          onClick={() => handleChange('open')}
+          disabled={pending}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-forest-900 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? <Spinner className="h-4 w-4" /> : '↻'} Reopen
+        </button>
+      )}
       <select
         key={status}
         defaultValue={status}
@@ -42,7 +53,7 @@ export function OpeningStatusControl({ openingId, status }: { openingId: string;
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      {pending && <Spinner className="h-4 w-4 text-forest-900" />}
+      {pending && !closedOut && <Spinner className="h-4 w-4 text-forest-900" />}
       {error && <span className="text-xs text-danger">{error}</span>}
     </div>
   );

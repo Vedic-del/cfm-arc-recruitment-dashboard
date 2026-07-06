@@ -92,6 +92,41 @@ export async function deleteOpenings(ids: string[]): Promise<void> {
   if (error) throw new Error(`deleteOpenings failed: ${error.message}`);
 }
 
+export interface RoleAnalytics {
+  openingId: string;
+  title: string;
+  status: OpeningStatus;
+  total: number;
+  active: number;
+  joined: number;
+  rejected: number;
+  dropped: number;
+}
+
+export async function getRoleAnalytics(): Promise<RoleAnalytics[]> {
+  const openings = await listOpenings();
+  const { data, error } = await supabase.from('candidate_openings').select('opening_id, current_stage');
+  if (error) throw new Error(`getRoleAnalytics failed: ${error.message}`);
+  const ACTIVE = new Set(['Sourced', 'Screening', 'Round 1', 'Round 2', 'HR/Offer Discussion', 'Offer']);
+  const agg: Record<string, { total: number; active: number; joined: number; rejected: number; dropped: number }> = {};
+  for (const r of data as { opening_id: string; current_stage: string }[]) {
+    const a = (agg[r.opening_id] ??= { total: 0, active: 0, joined: 0, rejected: 0, dropped: 0 });
+    a.total += 1;
+    if (r.current_stage === 'Joined') a.joined += 1;
+    else if (r.current_stage === 'Rejected') a.rejected += 1;
+    else if (r.current_stage === 'Dropped') a.dropped += 1;
+    else if (ACTIVE.has(r.current_stage)) a.active += 1;
+  }
+  return openings
+    .map((o) => ({
+      openingId: o.id,
+      title: o.title,
+      status: o.status,
+      ...(agg[o.id] ?? { total: 0, active: 0, joined: 0, rejected: 0, dropped: 0 }),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export async function averageTimeToFill(): Promise<number | null> {
   const { data, error } = await supabase
     .from('openings')

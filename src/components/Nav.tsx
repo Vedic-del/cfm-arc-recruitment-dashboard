@@ -7,6 +7,7 @@ const LINKS = [
   { href: '/', label: 'Dashboard' },
   { href: '/openings', label: 'Openings' },
   { href: '/candidates', label: 'Candidates' },
+  { href: '/analytics', label: 'Analytics' },
 ];
 
 function isActive(pathname: string, href: string) {
