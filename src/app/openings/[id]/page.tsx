@@ -19,8 +19,14 @@ export default async function OpeningDetailPage({ params }: { params: Promise<{ 
   const opening = await getOpening(id);
   if (!opening) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 bg-white p-10 text-center">
-        <p className="text-sm text-slate">Opening not found.</p>
+      <div className="mx-auto max-w-md rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+        <p className="text-sm text-slate">This opening no longer exists — it may have been deleted.</p>
+        <Link
+          href="/openings"
+          className="mt-4 inline-block rounded-lg bg-forest-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-forest-700"
+        >
+          Back to openings
+        </Link>
       </div>
     );
   }

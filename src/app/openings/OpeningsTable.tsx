@@ -103,7 +103,7 @@ export function OpeningsTable({ openings }: { openings: OpeningWithCount[] }) {
                     aria-label={`Select ${o.title}`}
                   />
                 </td>
-                <td className="p-3">
+                <td className={`p-3 ${o.priority === 'urgent' ? 'border-l-2 border-danger' : ''}`}>
                   <Link href={`/openings/${o.id}`} className="font-medium text-forest-700 hover:text-forest-900 hover:underline">
                     {o.title}
                   </Link>
