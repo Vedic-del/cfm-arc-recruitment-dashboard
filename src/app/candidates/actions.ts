@@ -3,6 +3,7 @@
 import {
   deleteCandidates,
   listAllCandidatesMatching,
+  mergeCandidates,
   type CandidateFilters,
 } from '@/lib/db/candidates';
 import {
@@ -30,6 +31,13 @@ export async function bulkMoveStageAction(
   revalidatePath(`/openings/${openingId}`);
   revalidatePath('/');
   return moved;
+}
+
+export async function mergeCandidatesAction(primaryId: string, duplicateIds: string[]) {
+  await mergeCandidates(primaryId, duplicateIds);
+  revalidatePath('/candidates');
+  revalidatePath('/candidates/duplicates');
+  revalidatePath('/');
 }
 
 export async function exportCandidatesAction(

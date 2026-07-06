@@ -157,6 +157,124 @@ export async function findPotentialDuplicates(input: {
   return matches;
 }
 
+export interface DuplicateGroup {
+  candidates: Candidate[];
+}
+
+// Group candidates that share a normalized email or phone (strong signals only —
+// name alone is too noisy). Uses union-find so a chain sharing either signal
+// forms one group.
+export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
+  const { data, error } = await supabase
+    .from('candidates')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`findDuplicateGroups failed: ${error.message}`);
+  const all = data as Candidate[];
+
+  const parent = new Map<string, string>();
+  all.forEach((c) => parent.set(c.id, c.id));
+  const find = (x: string): string => {
+    let root = x;
+    while (parent.get(root) !== root) root = parent.get(root)!;
+    while (parent.get(x) !== root) {
+      const nxt = parent.get(x)!;
+      parent.set(x, root);
+      x = nxt;
+    }
+    return root;
+  };
+  const union = (a: string, b: string) => parent.set(find(a), find(b));
+
+  const linkBy = (key: (c: Candidate) => string) => {
+    const index = new Map<string, string>();
+    for (const c of all) {
+      const k = key(c);
+      if (!k) continue;
+      const seen = index.get(k);
+      if (seen) union(seen, c.id);
+      else index.set(k, c.id);
+    }
+  };
+  linkBy((c) => (c.email ?? '').trim().toLowerCase());
+  linkBy((c) => {
+    const digits = (c.phone ?? '').replace(/\D/g, '');
+    return digits.length >= 10 ? digits.slice(-10) : '';
+  });
+
+  const groups = new Map<string, Candidate[]>();
+  for (const c of all) {
+    const root = find(c.id);
+    (groups.get(root) ?? groups.set(root, []).get(root)!).push(c);
+  }
+  return Array.from(groups.values())
+    .filter((g) => g.length >= 2)
+    .sort((a, b) => b.length - a.length)
+    .map((candidates) => ({ candidates }));
+}
+
+const MERGE_FIELDS = [
+  'phone', 'email', 'location', 'current_employer', 'current_designation',
+  'years_experience_total', 'years_experience_relevant', 'current_salary',
+  'expected_salary', 'notice_period', 'source', 'tags', 'resume_summary',
+] as const;
+
+export async function mergeCandidates(primaryId: string, duplicateIds: string[]): Promise<void> {
+  const ids = duplicateIds.filter((id) => id !== primaryId);
+  if (ids.length === 0) return;
+
+  const { data, error } = await supabase.from('candidates').select('*').in('id', [primaryId, ...ids]);
+  if (error) throw new Error(`mergeCandidates fetch failed: ${error.message}`);
+  const rows = data as Candidate[];
+  const primary = rows.find((r) => r.id === primaryId);
+  if (!primary) throw new Error('mergeCandidates: primary not found');
+  const dups = rows.filter((r) => ids.includes(r.id));
+
+  // Enrich primary with any field it's missing from a duplicate.
+  const primaryRec = primary as unknown as Record<string, unknown>;
+  const patch: Record<string, unknown> = {};
+  for (const f of MERGE_FIELDS) {
+    if (primaryRec[f] === null || primaryRec[f] === undefined || primaryRec[f] === '') {
+      const val = dups
+        .map((d) => (d as unknown as Record<string, unknown>)[f])
+        .find((v) => v !== null && v !== undefined && v !== '');
+      if (val !== undefined) patch[f] = val;
+    }
+  }
+  if (Object.keys(patch).length > 0) {
+    await supabase.from('candidates').update(patch).eq('id', primaryId);
+  }
+
+  // Re-point notes (tolerate the table not existing pre-migration).
+  try {
+    await supabase.from('candidate_notes').update({ candidate_id: primaryId }).in('candidate_id', ids);
+  } catch {
+    /* notes table may not exist yet */
+  }
+
+  // Re-point pipeline links, skipping any opening the primary is already in
+  // (the duplicate's link there is dropped when the duplicate is deleted).
+  const { data: primLinks } = await supabase
+    .from('candidate_openings')
+    .select('opening_id')
+    .eq('candidate_id', primaryId);
+  const primOpenings = new Set((primLinks as { opening_id: string }[] | null ?? []).map((r) => r.opening_id));
+  const { data: dupLinks } = await supabase
+    .from('candidate_openings')
+    .select('id, opening_id')
+    .in('candidate_id', ids);
+  for (const link of (dupLinks as { id: string; opening_id: string }[] | null) ?? []) {
+    if (!primOpenings.has(link.opening_id)) {
+      await supabase.from('candidate_openings').update({ candidate_id: primaryId }).eq('id', link.id);
+      primOpenings.add(link.opening_id);
+    }
+  }
+
+  // Delete the duplicates; cascade clears any links/events/scorecards left on them.
+  const { error: delErr } = await supabase.from('candidates').delete().in('id', ids);
+  if (delErr) throw new Error(`mergeCandidates delete failed: ${delErr.message}`);
+}
+
 export async function getCandidate(id: string): Promise<Candidate | null> {
   const { data, error } = await supabase.from('candidates').select('*').eq('id', id).single();
   if (error) return null;

@@ -64,6 +64,12 @@ export default async function CandidatesPage({ searchParams }: { searchParams: P
         </div>
         <div className="flex gap-2">
           <Link
+            href="/candidates/duplicates"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
+          >
+            ⧉ Duplicates
+          </Link>
+          <Link
             href="/candidates/import"
             className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-forest-900 transition-colors hover:bg-slate-100"
           >
