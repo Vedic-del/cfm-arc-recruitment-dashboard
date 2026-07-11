@@ -149,3 +149,27 @@ alter table candidate_notes disable row level security;
 alter table candidate_openings add column next_step text;
 alter table candidate_openings add column next_action_date date;
 alter table candidate_openings add column outcome_reason text;
+
+-- ===========================================================================
+-- SECURITY LOCKDOWN (run once). The app now talks to Postgres only through a
+-- server-only service-role key (see src/lib/supabaseClient.ts), which bypasses
+-- RLS. Turning RLS back ON with NO policies makes the tables default-deny for
+-- the public anon key — so the browser key can no longer read or write data
+-- directly through the auto-generated REST API. The service-role key (server
+-- side only) is unaffected, so the app keeps working.
+--
+-- Prerequisite: set SUPABASE_SERVICE_ROLE_KEY in the app environment BEFORE
+-- running this, or the app will lose database access.
+-- ===========================================================================
+alter table openings enable row level security;
+alter table candidates enable row level security;
+alter table candidate_openings enable row level security;
+alter table pipeline_events enable row level security;
+alter table scorecards enable row level security;
+alter table candidate_notes enable row level security;
+
+-- Resumes are no longer stored in Storage; drop the leftover anon bucket
+-- policies so nothing anonymous can touch storage either.
+drop policy if exists "Allow anon uploads to resumes bucket" on storage.objects;
+drop policy if exists "Allow anon updates to resumes bucket" on storage.objects;
+drop policy if exists "Allow anon reads on resumes bucket" on storage.objects;

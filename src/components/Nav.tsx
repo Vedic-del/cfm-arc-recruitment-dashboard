@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { logoutAction } from '@/app/login/actions';
 
 const LINKS = [
   { href: '/', label: 'Dashboard' },
@@ -15,8 +16,9 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Nav() {
+export function Nav({ authEnabled = false }: { authEnabled?: boolean }) {
   const pathname = usePathname();
+  if (pathname === '/login') return null;
 
   return (
     <nav className="sticky top-0 z-10 border-b border-slate-200 bg-paper/85 shadow-[0_1px_0_rgba(15,76,58,0.04)] backdrop-blur supports-[backdrop-filter]:bg-paper/70">
@@ -48,6 +50,16 @@ export function Nav() {
             );
           })}
         </div>
+        {authEnabled && (
+          <form action={logoutAction} className="ml-auto shrink-0">
+            <button
+              type="submit"
+              className="rounded-md px-3 py-2 text-sm font-medium text-slate transition-colors hover:bg-slate-100 hover:text-forest-900"
+            >
+              Sign out
+            </button>
+          </form>
+        )}
       </div>
     </nav>
   );
